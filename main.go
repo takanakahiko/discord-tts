@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -10,6 +13,12 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/jonas747/dca"
+)
+
+var (
+	textChanelID string                     = "not set"
+	vcsession    *discordgo.VoiceConnection = nil
 )
 
 func main() {
@@ -37,25 +46,96 @@ func main() {
 	return
 }
 
-func botName() string {
-	return "<@!" + os.Getenv("CLIENT_ID") + ">"
+func clientID() string {
+	return os.Getenv("CLIENT_ID")
 }
 
-func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+func botName() string {
+	return "<@!" + clientID() + ">"
+}
 
-	fmt.Printf("\t%s\t%s\t%s\t>\t%s\n", m.ChannelID, time.Now().Format(time.Stamp), m.Author.Username, m.Content)
+func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
+
+	log.Printf("\t%s\t%s\t>\t%s\n", m.ChannelID, m.Author.Username, m.Content)
 
 	switch {
-	case strings.HasPrefix(m.Content, botName()):
-		sendMessage(s, m.ChannelID, strings.Replace(m.Content, botName(), "", -1))
+	case strings.HasPrefix(m.Content, botName()+" join"):
+		var err error
+		vcsession, err = joinUserVoiceChannel(discord, m.Author.ID)
+		if err != nil {
+			sendMessage(discord, m.ChannelID, err.Error())
+		}
+		textChanelID = m.ChannelID
+		sendMessage(discord, m.ChannelID, "Joined to voice chat!")
+	case strings.Contains(m.Content, "http"):
+		sendMessage(discord, m.ChannelID, "URLなのでスキップしました")
+	case vcsession != nil && m.ChannelID == textChanelID && m.Author.ID != clientID():
+		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
+		if err := playAudioFile(vcsession, url); err != nil {
+			sendMessage(discord, m.ChannelID, err.Error())
+		}
 	}
 }
 
-func sendMessage(s *discordgo.Session, channelID string, msg string) {
-	_, err := s.ChannelMessageSend(channelID, msg)
+func sendMessage(discord *discordgo.Session, channelID string, msg string) {
+	_, err := discord.ChannelMessageSend(channelID, "[BOT] "+msg)
 
 	log.Println(">>> " + msg)
 	if err != nil {
 		log.Println("Error sending message: ", err)
+	}
+}
+
+func joinUserVoiceChannel(discord *discordgo.Session, userID string) (*discordgo.VoiceConnection, error) {
+	vs, err := findUserVoiceState(discord, userID)
+	if err != nil {
+		return nil, err
+	}
+	return discord.ChannelVoiceJoin(vs.GuildID, vs.ChannelID, false, true)
+}
+
+func findUserVoiceState(discord *discordgo.Session, userid string) (*discordgo.VoiceState, error) {
+	for _, guild := range discord.State.Guilds {
+		for _, vs := range guild.VoiceStates {
+			if vs.UserID == userid {
+				return vs, nil
+			}
+		}
+	}
+	return nil, errors.New("Could not find user's voice state")
+}
+
+func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
+	if err := v.Speaking(true); err != nil {
+		return err
+	}
+	defer v.Speaking(false)
+
+	opts := dca.StdEncodeOptions
+	opts.RawOutput = true
+	opts.Bitrate = 120
+
+	encodeSession, err := dca.EncodeFile(filename, opts)
+	if err != nil {
+		return err
+	}
+
+	done := make(chan error)
+	stream := dca.NewStream(encodeSession, v, done)
+	ticker := time.NewTicker(time.Second)
+
+	for {
+		select {
+		case err := <-done:
+			if err != nil && err != io.EOF {
+				return err
+			}
+			encodeSession.Truncate()
+			return nil
+		case <-ticker.C:
+			stats := encodeSession.Stats()
+			playbackPosition := stream.PlaybackPosition()
+			log.Printf("Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
+		}
 	}
 }

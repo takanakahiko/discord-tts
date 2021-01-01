@@ -1,4 +1,4 @@
-module github.com/takanakahiko/discord-recipe-recommendation
+module github.com/takanakahiko/discord-tts
 
 go 1.15
 

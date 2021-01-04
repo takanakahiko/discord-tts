@@ -55,9 +55,12 @@ func botName() string {
 }
 
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
-	var discordChannel, _ = discord.Channel(m.ChannelID)
-
-	log.Printf("\t%s\t%s\t>\t%s\n", discordChannel.Name, m.Author.Username, m.Content)
+	discordChannel, err := discord.Channel(m.ChannelID)
+	if err != nil {
+		log.Printf("\t%s\t%s\t>\t%s\n", m.ChannelID, m.Author.Username, m.Content)
+	} else {
+		log.Printf("\t%s\t%s\t>\t%s\n", discordChannel.Name, m.Author.Username, m.Content)
+	}
 
 	switch {
 	case strings.HasPrefix(m.Content, botName()+" join"):

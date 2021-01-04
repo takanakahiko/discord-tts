@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -21,8 +20,6 @@ var (
 	textChanelID string                     = "not set"
 	vcsession    *discordgo.VoiceConnection = nil
 )
-
-var mut sync.Mutex
 
 func main() {
 	discord, err := discordgo.New()
@@ -77,9 +74,6 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	case strings.Contains(m.Content, "http"):
 		sendMessage(discord, m.ChannelID, "URLなのでスキップしました")
 	case vcsession != nil && m.ChannelID == textChanelID && m.Author.ID != clientID():
-		mut.Lock()
-		defer mut.Unlock()
-
 		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
 		if err := playAudioFile(vcsession, url); err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())

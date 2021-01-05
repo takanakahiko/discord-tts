@@ -20,9 +20,8 @@ import (
 var (
 	textChanelID string                     = "not set"
 	vcsession    *discordgo.VoiceConnection = nil
+	mut          sync.Mutex
 )
-
-var mut sync.Mutex
 
 func main() {
 	discord, err := discordgo.New()
@@ -74,6 +73,16 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		textChanelID = m.ChannelID
 		sendMessage(discord, m.ChannelID, "Joined to voice chat!")
+	case strings.HasPrefix(m.Content, botName()+" leave"):
+		if vcsession == nil {
+			return
+		}
+		err := vcsession.Disconnect()
+		if err != nil {
+			sendMessage(discord, m.ChannelID, err.Error())
+		}
+		sendMessage(discord, m.ChannelID, "Left from voice chat...")
+		vcsession = nil
 	case strings.Contains(m.Content, "http"):
 		sendMessage(discord, m.ChannelID, "URLなのでスキップしました")
 	case vcsession != nil && m.ChannelID == textChanelID && m.Author.ID != clientID():

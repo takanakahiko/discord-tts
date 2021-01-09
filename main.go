@@ -83,7 +83,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
 		vcsession = nil
-	case strings.Contains(m.Content, "http"):
+	case vcsession != nil && strings.Contains(m.Content, "http"):
 		sendMessage(discord, m.ChannelID, "URLなのでスキップしました")
 	case vcsession != nil && m.ChannelID == textChanelID && m.Author.ID != clientID():
 		mut.Lock()

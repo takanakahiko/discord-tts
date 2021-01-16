@@ -85,10 +85,11 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		vcsession = nil
 	case vcsession != nil && strings.Contains(m.Content, "http"):
 		sendMessage(discord, m.ChannelID, "URLなのでスキップしました")
+	case vcsession != nil && strings.Contains(m.Content, "<a:"): // <a:demonRave:637328196689199115> こういうの
+		sendMessage(discord, m.ChannelID, "オリジナル絵文字なのでスキップしました")
 	case vcsession != nil && m.ChannelID == textChanelID && m.Author.ID != clientID():
 		mut.Lock()
 		defer mut.Unlock()
-
 		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
 		if err := playAudioFile(vcsession, url); err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())

@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -21,6 +22,7 @@ var (
 	textChanelID string                     = "not set"
 	vcsession    *discordgo.VoiceConnection = nil
 	mut          sync.Mutex
+	speechSpeed  float32 = 1.0
 )
 
 func main() {
@@ -83,6 +85,12 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
 		vcsession = nil
+	case strings.HasPrefix(m.Content, botName()+" speed "):
+		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
+		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
+			speechSpeed = float32(newSpeed)
+			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
+		}
 	case vcsession != nil && strings.Contains(m.Content, "http"):
 		sendMessage(discord, m.ChannelID, "URLなのでスキップしました")
 	case vcsession != nil && strings.Contains(m.Content, "<a:"): // <a:demonRave:637328196689199115> こういうの
@@ -134,6 +142,7 @@ func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
 	opts := dca.StdEncodeOptions
 	opts.RawOutput = true
 	opts.Bitrate = 120
+	opts.AudioFilter = fmt.Sprintf("atempo=%f", speechSpeed)
 
 	encodeSession, err := dca.EncodeFile(filename, opts)
 	if err != nil {

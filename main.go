@@ -25,6 +25,7 @@ var (
   vcsession    *discordgo.VoiceConnection = nil
   mut          sync.Mutex
   speechSpeed  float32 = 1.0
+  speechPitch  float32 = 1.0
   //botのcall token id の入手
   //call_type default:mention
   call_type = flag.String("call", "mention", "call prefix")
@@ -99,9 +100,9 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
     log.Printf("ch:%s user:%s > %s\n", discordChannel.Name, m.Author.Username, m.Content)
   }
 
-  switch {
-    //メッセージからjoinを検知して実行
-    case strings.HasPrefix(m.Content, botName()+" join"):
+  //VC接続していない
+  if vcsession == nil {
+    if strings.HasPrefix(m.Content, botName()+" join") {
       //エラー変数を定義
       var err error
       //VCに接続
@@ -114,52 +115,53 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
       textChanelID = m.ChannelID
       //VCに接続したことを定義
       sendMessage(discord, m.ChannelID, "Joined to voice chat!")
-    //メッセージからleaveを検知して実行
-    case strings.HasPrefix(m.Content, botName()+" leave"):
-      //VCに接続してるか確認
-      if vcsession == nil {
-        return
-      }
-      //vcsessionをkill
-      err := vcsession.Disconnect()
-      //errorがあれば表示
-      if err != nil {
-        sendMessage(discord, m.ChannelID, err.Error())
-      }
-      //VCから抜けたのをsendする
-      sendMessage(discord, m.ChannelID, "Left from voice chat...")
-      //VCにいないのを定義
-      vcsession = nil
+    }
+  //VC接続済み textチャンネル=メッセージのチャンネル
+  } else if m.ChannelID == textChanelID {
+    switch {
+      //メッセージからleaveを検知して実行
+      case strings.HasPrefix(m.Content, botName()+" leave"):
+        //vcsessionをなくす
+        err := vcsession.Disconnect()
+        //errorがあれば表示
+        if err != nil {
+          sendMessage(discord, m.ChannelID, err.Error())
+        }
+        //VCから抜けたのをsendする
+        sendMessage(discord, m.ChannelID, "Left from voice chat...")
+        //VCにいないのを定義
+        vcsession = nil
       //メッセージからspeedを検知して実行
-    case strings.HasPrefix(m.Content, botName()+" speed "):
-      //数字部分を切り出し
-      speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
-      //切り出し結果が正しいか確認
-      if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
-        //スピードを変数に設定
-        speechSpeed = float32(newSpeed)
-        //設定したことをstring to float して通知
-        sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
-      }
-    //メッセージにhttpが入ってないかを確認&switchで書かれてるからskip
-    case vcsession != nil && strings.Contains(m.Content, "http"):
-      sendMessage(discord, m.ChannelID, "URLなのでスキップしました")
-    //メッセージに<a:が入ってないかを確認&switchで書かれてるからskip
-    case vcsession != nil && strings.Contains(m.Content, "<a:"): // <a:demonRave:637328196689199115> こういうの
-      sendMessage(discord, m.ChannelID, "オリジナル絵文字なのでスキップしました")
-    //text ch = メッセージ受信チャンネル,発言者 !=自分 かを確認
-    case vcsession != nil && m.ChannelID == textChanelID && m.Author.ID != clientID():
-      //muteして二重発言を対策
-      mut.Lock()
-      //発言終わりまで待機
-      defer mut.Unlock()
-      //テキストをaudio file化
-      url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
-      //playする
-      if err := playAudioFile(vcsession, url); err != nil {
-        //playに失敗したらerrorを表示
-        sendMessage(discord, m.ChannelID, err.Error())
-      }
+      case strings.HasPrefix(m.Content, botName()+" speed "):
+        //数字部分を切り出し
+        speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
+        //切り出し結果が正しいか確認
+        if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
+          //スピードを変数に設定
+          speechSpeed = float32(newSpeed)
+          //設定したことをstring to float して通知
+          sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
+        }
+      //メッセージに ; が入ってないかを確認&switchで書かれてるからskip
+      case strings.HasPrefix(m.Content, ";") || strings.HasPrefix(m.Content, "[BOT] "):
+         log.Println("bot tts skip this message")
+      //メッセージに<a: http <@ <# <@& が入ってないかを確認&switchで書かれてるからskip
+      case strings.Contains(m.Content, "<a:") || strings.Contains(m.Content, "http") || strings.Contains(m.Content, "<@") || strings.Contains(m.Content, "<#") || strings.Contains(m.Content, "<@&"):
+        sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
+      //text ch = メッセージ受信チャンネル,発言者 !=自分 かを確認
+      case m.Author.ID != clientID():
+        //muteして二重発言を対策
+        mut.Lock()
+        //発言終わりまで待機
+        defer mut.Unlock()
+        //テキストをaudio file化
+        url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
+        //playする
+        if err := playAudioFile(vcsession, url); err != nil {
+          //playに失敗したらerrorを表示
+          sendMessage(discord, m.ChannelID, err.Error())
+        }
+    }
   }
 }
 
@@ -209,7 +211,7 @@ func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
   //喋ってる判定がなくなるまで待機 そのあと 喋ってる判定を消す
   defer v.Speaking(false)
 
-  //喋ってる判定を起こすときに使うやつ
+  //fileをエンコード
   opts := dca.StdEncodeOptions
   //speechSpeedを参照して再生速度を指定
   opts.AudioFilter = fmt.Sprintf("atempo=%f", speechSpeed)

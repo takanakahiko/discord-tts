@@ -16,6 +16,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
+
+	"flag"
 )
 
 var (
@@ -23,9 +25,13 @@ var (
 	vcsession    *discordgo.VoiceConnection = nil
 	mut          sync.Mutex
 	speechSpeed  float32 = 1.0
+	//call_type default:mention
+	call_type = flag.String("call", "mention", "call prefix")
 )
 
 func main() {
+	flag.Parse()
+	fmt.Println("call         :",*call_type)
 	discord, err := discordgo.New()
 	discord.Token = "Bot " + os.Getenv("TOKEN")
 	if err != nil {
@@ -55,7 +61,12 @@ func clientID() string {
 }
 
 func botName() string {
-	return "<@!" + clientID() + ">"
+	//call_typeがメンション(default)ならばmentionで呼べるようreturn
+	if (*call_type == "mention") {
+		return "<@" + clientID() + ">"
+	}
+	//それ以外だったらcall_typeを先頭に設定してreturn
+	return *call_type
 }
 
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {

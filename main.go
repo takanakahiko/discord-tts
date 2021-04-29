@@ -112,7 +112,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
 		}
 		return
-	case m.ChannelID == textChanelID && strings.HasPrefix(m.Content, ";"):
+	case vcsession != nil && m.ChannelID == textChanelID && strings.HasPrefix(m.Content, ";"):
 		log.Println("bot tts skip this message")
 		return
 	case vcsession != nil && m.ChannelID == textChanelID && strings.Contains(m.Content, "<a:") || strings.Contains(m.Content, "http") || strings.Contains(m.Content, "<@") || strings.Contains(m.Content, "<#") || strings.Contains(m.Content, "<@&"):

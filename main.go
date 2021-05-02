@@ -139,7 +139,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 			//設定したことをstring to float して通知
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
 		}
-	//メッセージに<a: http <@ <# <@& が入ってないかを確認&switchで書かれてるからskip&textチャンネル=メッセージのチャンネル
+	//メッセージに<a: http <@ <# <@& が入ってないかを確認
 	case regexp.MustCompile(`<a:|<@|<#|<@&|http`).MatchString(m.Content) :
 		sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
 	//上に適合するものがない場合読み上げ

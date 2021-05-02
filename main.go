@@ -13,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"regexp"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"

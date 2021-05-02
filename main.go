@@ -22,17 +22,16 @@ import (
 )
 
 var (
-	textChanelID string                     = "not set"
-	vcsession    *discordgo.VoiceConnection = nil
-	mut          sync.Mutex
-	speechSpeed  float32 = 1.0
-	//call_type default:mention
-	call_type = flag.String("call", "mention", "call prefix")
+	textChanelID = "not set"
+	vcsession *discordgo.VoiceConnection = nil
+	mut sync.Mutex
+	speechSpeed float32 = 1.0
+	prefix = flag.String("prefix", "", "call prefix")
 )
 
 func main() {
 	flag.Parse()
-	fmt.Println("call         :",*call_type)
+	fmt.Println("prefix       :",*prefix)
 	discord, err := discordgo.New()
 	discord.Token = "Bot " + os.Getenv("TOKEN")
 	if err != nil {
@@ -62,12 +61,11 @@ func clientID() string {
 }
 
 func botName() string {
-	//call_typeがメンション(default)ならばmentionで呼べるようreturn
-	if (*call_type == "mention") {
+	// if prefix is "", you can call by mention
+	if *prefix == "mention" {
 		return "<@" + clientID() + ">"
 	}
-	//それ以外だったらcall_typeを先頭に設定してreturn
-	return *call_type
+	return *prefix
 }
 
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
@@ -84,12 +82,12 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if strings.HasPrefix(m.Content, botName()+" join") {
+	// "join" command
+	if isCommandMessage(m.Content, "join") {
 		if vcsession != nil {
 			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
 			return
 		}
-		var err error
 		vcsession, err = joinUserVoiceChannel(discord, m.Author.ID)
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
@@ -100,36 +98,45 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	// ignore case of "not join", "another channel" or "include ignore prefix"
 	if vcsession == nil || m.ChannelID != textChanelID || strings.HasPrefix(m.Content, ";") {
 		return
 	}
 
+	// other commands
 	switch {
-	case strings.HasPrefix(m.Content, botName()+" leave"):
+	case isCommandMessage(m.Content, "leave"):
 		err := vcsession.Disconnect()
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
 		vcsession = nil
-	case strings.HasPrefix(m.Content, botName()+" speed "):
+	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
 			speechSpeed = float32(newSpeed)
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
 		}
-	case regexp.MustCompile(`<a:|<@|<#|<@&|http`).MatchString(m.Content) :
-		sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
-	default:
-		mut.Lock()
-		defer mut.Unlock()
-		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
-		if err := playAudioFile(vcsession, url); err != nil {
-			sendMessage(discord, m.ChannelID, err.Error())
-		}
 	}
-} 
 
+	// ignore emoji, mention channel, group mention and url
+	if regexp.MustCompile(`<a:|<@|<#|<@&|http`).MatchString(m.Content) {
+		sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
+	}
+
+	// Speech
+	mut.Lock()
+	defer mut.Unlock()
+	url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
+	if err := playAudioFile(vcsession, url); err != nil {
+		sendMessage(discord, m.ChannelID, err.Error())
+	}
+}
+
+func isCommandMessage(message, command string) bool {
+	return strings.HasPrefix(message, botName()+" "+command)
+}
 
 func sendMessage(discord *discordgo.Session, channelID string, msg string) {
 	_, err := discord.ChannelMessageSend(channelID, "[BOT] "+msg)

@@ -82,8 +82,8 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
 	}
-	switch {
-	case strings.HasPrefix(m.Content, botName()+" join"):
+
+	if strings.HasPrefix(m.Content, botName()+" join") {
 		if vcsession != nil {
 			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
 			return
@@ -97,37 +97,38 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		textChanelID = m.ChannelID
 		sendMessage(discord, m.ChannelID, "Joined to voice chat!")
 		return
-	case vcsession != nil && m.ChannelID == textChanelID && strings.HasPrefix(m.Content, botName()+" leave"):
+	}
+
+	if vcsession == nil || m.ChannelID != textChanelID || strings.HasPrefix(m.Content, ";") {
+		return
+	}
+
+	switch {
+	case strings.HasPrefix(m.Content, botName()+" leave"):
 		err := vcsession.Disconnect()
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
 		vcsession = nil
-		return
-	case vcsession != nil && m.ChannelID == textChanelID && strings.HasPrefix(m.Content, botName()+" speed "):
+	case strings.HasPrefix(m.Content, botName()+" speed "):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
 			speechSpeed = float32(newSpeed)
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
 		}
-		return
-	case vcsession != nil && m.ChannelID == textChanelID && strings.HasPrefix(m.Content, ";"):
-		log.Println("bot tts skip this message")
-		return
-	case vcsession != nil && m.ChannelID == textChanelID && strings.Contains(m.Content, "<a:") || strings.Contains(m.Content, "http") || strings.Contains(m.Content, "<@") || strings.Contains(m.Content, "<#") || strings.Contains(m.Content, "<@&"):
+	case regexp.MustCompile(`<a:|<@|<#|<@&|http`).MatchString(m.Content) :
 		sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
-		return
-	case vcsession != nil && m.ChannelID == textChanelID:
+	default:
 		mut.Lock()
 		defer mut.Unlock()
-		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
+		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
 		if err := playAudioFile(vcsession, url); err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 		}
-		return
 	}
-}
+} 
+
 
 func sendMessage(discord *discordgo.Session, channelID string, msg string) {
 	_, err := discord.ChannelMessageSend(channelID, "[BOT] "+msg)

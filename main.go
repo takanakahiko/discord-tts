@@ -72,13 +72,13 @@ func botName() string {
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	discordChannel, err := discord.Channel(m.ChannelID)
 	if err != nil {
-		log.Printf("\t%s\t%s\t>\t%s\n", m.ChannelID, m.Author.Username, m.Content)
+		log.Fatal(err)
+		return
 	} else {
 		log.Printf("ch:%s user:%s > %s\n", discordChannel.Name, m.Author.Username, m.Content)
 	}
 
-	//VC関連
-	//bot check
+	// bot check
 	if m.Author.Bot {
 		return
 	}

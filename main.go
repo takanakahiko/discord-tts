@@ -77,9 +77,14 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		log.Printf("ch:%s user:%s > %s\n", discordChannel.Name, m.Author.Username, m.Content)
 	}
 
+	//VC関連
+	//bot check
+	if m.Author.Bot {
+		return
+	}
 	switch {
 	case strings.HasPrefix(m.Content, botName()+" join"):
-		if vcsession == nil {
+		if vcsession != nil {
 			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
 			return
 		}
@@ -87,50 +92,40 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		vcsession, err = joinUserVoiceChannel(discord, m.Author.ID)
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
+			return
 		}
 		textChanelID = m.ChannelID
 		sendMessage(discord, m.ChannelID, "Joined to voice chat!")
-	case strings.HasPrefix(m.Content, botName()+" leave"):
-		if m.ChannelID != textChanelID {
-			sendMessage(discord, m.ChannelID, "Bot is not already in voice-chat here.")
-			return
-		}
+		return
+	case vcsession != nil && m.ChannelID == textChanelID && strings.HasPrefix(m.Content, botName()+" leave"):
 		err := vcsession.Disconnect()
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
 		vcsession = nil
-	case strings.HasPrefix(m.Content, botName()+" speed "):
-		if m.ChannelID != textChanelID {
-			sendMessage(discord, m.ChannelID, "Bot is not already in voice-chat here.")
-			return
-		}
+		return
+	case vcsession != nil && m.ChannelID == textChanelID && strings.HasPrefix(m.Content, botName()+" speed "):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
 			speechSpeed = float32(newSpeed)
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
 		}
-	case strings.HasPrefix(m.Content, ";") || strings.HasPrefix(m.Content, "[BOT] "):
-		if m.ChannelID != textChanelID {
-			return
-		}
+		return
+	case vcsession != nil && m.ChannelID == textChanelID && strings.HasPrefix(m.Content, ";"):
 		log.Println("bot tts skip this message")
-	case strings.Contains(m.Content, "<a:") || strings.Contains(m.Content, "http") || strings.Contains(m.Content, "<@") || strings.Contains(m.Content, "<#") || strings.Contains(m.Content, "<@&"):
-		if m.ChannelID != textChanelID {
-			return
-		}
+		return
+	case vcsession != nil && m.ChannelID == textChanelID && strings.Contains(m.Content, "<a:") || strings.Contains(m.Content, "http") || strings.Contains(m.Content, "<@") || strings.Contains(m.Content, "<#") || strings.Contains(m.Content, "<@&"):
 		sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
-	case m.Author.ID != clientID():
-		if m.ChannelID != textChanelID {
-			return
-		}
+		return
+	case vcsession != nil && m.ChannelID == textChanelID:
 		mut.Lock()
 		defer mut.Unlock()
 		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
 		if err := playAudioFile(vcsession, url); err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 		}
+		return
 	}
 }
 

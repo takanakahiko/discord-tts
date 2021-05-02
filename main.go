@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -17,35 +18,38 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
-
-	"flag"
 )
 
 var (
-	textChanelID = "not set"
-	vcsession *discordgo.VoiceConnection = nil
-	mut sync.Mutex
-	speechSpeed float32 = 1.0
-	prefix = flag.String("prefix", "", "call prefix")
+	textChanelID                               = "not set"
+	voiceConnection *discordgo.VoiceConnection = nil
+	mut             sync.Mutex
+	speechSpeed     float32 = 1.0
+	prefix           = flag.String("prefix", "", "call prefix")
 )
 
 func main() {
 	flag.Parse()
 	fmt.Println("prefix       :",*prefix)
+
 	discord, err := discordgo.New()
-	discord.Token = "Bot " + os.Getenv("TOKEN")
 	if err != nil {
 		fmt.Println("Error logging in")
 		fmt.Println(err)
 	}
 
+	discord.Token = "Bot " + os.Getenv("TOKEN")
 	discord.AddHandler(onMessageCreate)
 
 	err = discord.Open()
 	if err != nil {
 		fmt.Println(err)
 	}
-	defer discord.Close()
+	defer func() {
+		if err := discord.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	fmt.Println("Listening...")
 
@@ -84,11 +88,11 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
-		if vcsession != nil {
+		if voiceConnection != nil {
 			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
 			return
 		}
-		vcsession, err = joinUserVoiceChannel(discord, m.Author.ID)
+		voiceConnection, err = joinUserVoiceChannel(discord, m.Author.ID)
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 			return
@@ -99,19 +103,19 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// ignore case of "not join", "another channel" or "include ignore prefix"
-	if vcsession == nil || m.ChannelID != textChanelID || strings.HasPrefix(m.Content, ";") {
+	if voiceConnection == nil || m.ChannelID != textChanelID || strings.HasPrefix(m.Content, ";") {
 		return
 	}
 
 	// other commands
 	switch {
 	case isCommandMessage(m.Content, "leave"):
-		err := vcsession.Disconnect()
+		err := voiceConnection.Disconnect()
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
-		vcsession = nil
+		voiceConnection = nil
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
@@ -128,8 +132,8 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	// Speech
 	mut.Lock()
 	defer mut.Unlock()
-	url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
-	if err := playAudioFile(vcsession, url); err != nil {
+	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
+	if err := playAudioFile(voiceConnection, voiceURL); err != nil {
 		sendMessage(discord, m.ChannelID, err.Error())
 	}
 }
@@ -163,14 +167,18 @@ func findUserVoiceState(discord *discordgo.Session, userid string) (*discordgo.V
 			}
 		}
 	}
-	return nil, errors.New("Could not find user's voice state")
+	return nil, errors.New("could not find user's voice state")
 }
 
 func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
 	if err := v.Speaking(true); err != nil {
 		return err
 	}
-	defer v.Speaking(false)
+	defer func() {
+		if err := v.Speaking(false); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	opts := dca.StdEncodeOptions
 	opts.RawOutput = true

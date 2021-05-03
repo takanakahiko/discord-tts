@@ -26,6 +26,7 @@ var (
 	mut             sync.Mutex
 	speechSpeed     float32 = 1.0
 	prefix                  = flag.String("prefix", "", "call prefix")
+	clientID = ""
 )
 
 func main() {
@@ -51,6 +52,8 @@ func main() {
 		}
 	}()
 
+	clientID = discord.State.User.ID
+
 	fmt.Println("Listening...")
 
 	sc := make(chan os.Signal, 1)
@@ -60,14 +63,10 @@ func main() {
 	return
 }
 
-func clientID() string {
-	return os.Getenv("CLIENT_ID")
-}
-
 func botName() string {
 	// if prefix is "", you can call by mention
 	if *prefix == "mention" {
-		return "<@" + clientID() + ">"
+		return "<@" + clientID + ">"
 	}
 	return *prefix
 }

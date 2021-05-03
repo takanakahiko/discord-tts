@@ -9,12 +9,12 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
-	"regexp"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
@@ -25,12 +25,12 @@ var (
 	voiceConnection *discordgo.VoiceConnection = nil
 	mut             sync.Mutex
 	speechSpeed     float32 = 1.0
-	prefix           = flag.String("prefix", "", "call prefix")
+	prefix                  = flag.String("prefix", "", "call prefix")
 )
 
 func main() {
 	flag.Parse()
-	fmt.Println("prefix       :",*prefix)
+	fmt.Println("prefix       :", *prefix)
 
 	discord, err := discordgo.New()
 	if err != nil {
@@ -171,6 +171,7 @@ func findUserVoiceState(discord *discordgo.Session, userid string) (*discordgo.V
 	return nil, errors.New("could not find user's voice state")
 }
 
+//play audio file
 func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
 	if err := v.Speaking(true); err != nil {
 		return err
@@ -182,6 +183,7 @@ func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
 	}()
 
 	opts := dca.StdEncodeOptions
+	opts.CompressionLevel = 0
 	opts.RawOutput = true
 	opts.Bitrate = 120
 	opts.AudioFilter = fmt.Sprintf("atempo=%f", speechSpeed)

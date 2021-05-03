@@ -26,7 +26,7 @@ var (
 	mut             sync.Mutex
 	speechSpeed     float32 = 1.0
 	prefix                  = flag.String("prefix", "", "call prefix")
-	clientID = ""
+	clientID                = ""
 )
 
 func main() {
@@ -116,17 +116,20 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
 		voiceConnection = nil
+		return
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
 			speechSpeed = float32(newSpeed)
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
 		}
+		return
 	}
 
 	// ignore emoji, mention channel, group mention and url
 	if regexp.MustCompile(`<a:|<@|<#|<@&|http`).MatchString(m.Content) {
 		sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
+		return
 	}
 
 	// Speech

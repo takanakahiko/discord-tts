@@ -72,6 +72,7 @@ func botName() string {
 	return *prefix
 }
 
+//event by message
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	discordChannel, err := discord.Channel(m.ChannelID)
 	if err != nil {

@@ -144,10 +144,15 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	lang := "ja"
+	if regexp.MustCompile("^[a-zA-Z0-9\\s.,]+$").MatchString(m.Content) {
+		lang = "en"
+	}
+
 	// Speech
 	mut.Lock()
 	defer mut.Unlock()
-	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), "ja")
+	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), lang)
 	if err := playAudioFile(voiceConnection, voiceURL); err != nil {
 		sendMessage(discord, m.ChannelID, err.Error())
 	}

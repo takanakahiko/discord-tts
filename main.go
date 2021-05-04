@@ -113,12 +113,24 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		err := voiceConnection.Disconnect()
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
+			return
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
 		voiceConnection = nil
 		return
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
+
+		speed, err := strconv.ParseFloat(speedStr, 64)
+		if err != nil {
+			sendMessage(discord, m.ChannelID, "数字ではない値は設定できません")
+			return
+		}
+		if speed < 0.5 || speed > 100 {
+			sendMessage(discord, m.ChannelID, "設定できるのは 0.5 ~ 100 の値です")
+			return
+		}
+
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
 			speechSpeed = float32(newSpeed)
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))

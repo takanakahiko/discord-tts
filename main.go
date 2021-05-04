@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	textChanelID                               = "not set"
+	textChanelID                               = ""
 	voiceConnection *discordgo.VoiceConnection = nil
 	mut             sync.Mutex
 	speechSpeed     float32 = 1.0
@@ -41,6 +41,7 @@ func main() {
 
 	discord.Token = "Bot " + os.Getenv("TOKEN")
 	discord.AddHandler(onMessageCreate)
+	discord.AddHandler(onVoiceStateUpdate)
 
 	err = discord.Open()
 	if err != nil {
@@ -155,6 +156,32 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), lang)
 	if err := playAudioFile(voiceConnection, voiceURL); err != nil {
 		sendMessage(discord, m.ChannelID, err.Error())
+	}
+}
+
+func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdate) {
+	if voiceConnection == nil {
+		return
+	}
+
+	// ボイスチャンネルに誰かしらいたら return
+	for _, guild := range discord.State.Guilds {
+		for _, vs := range guild.VoiceStates {
+			if v.ChannelID == vs.ChannelID {
+				return
+			}
+		}
+	}
+
+	// ボイスチャンネルに誰もいなかったら Disconnect する
+	err := voiceConnection.Disconnect()
+	if err != nil {
+		fmt.Printf("err=%+v", err)
+	}
+	voiceConnection = nil
+
+	if textChanelID != "" {
+		sendMessage(discord, textChanelID, "Left from voice chat...")
 	}
 }
 

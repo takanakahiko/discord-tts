@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -18,7 +19,7 @@ type TtsSession struct {
 	TextChanelID    string
 	VoiceConnection *discordgo.VoiceConnection
 	mut             sync.Mutex
-	SpeechSpeed     float32
+	speechSpeed     float64
 }
 
 // NewTtsSession create new TtsSession
@@ -27,7 +28,7 @@ func NewTtsSession() *TtsSession {
 		TextChanelID:    "",
 		VoiceConnection: nil,
 		mut:             sync.Mutex{},
-		SpeechSpeed:     1.0,
+		speechSpeed:     1.0,
 	}
 }
 
@@ -80,6 +81,17 @@ func (t *TtsSession) Leave(discord *discordgo.Session) error {
 	return nil
 }
 
+// SetSpeechSpeed validate and set speechSpeed
+func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed float64) error {
+	if newSpeechSpeed < 0.5 || newSpeechSpeed > 100 {
+		t.SendMessage(discord, "You can set a value from 0.5 to 100")
+		return fmt.Errorf("newSpeechSpeed=%v is invalid", newSpeechSpeed)
+	}
+	t.speechSpeed = newSpeechSpeed
+	t.SendMessage(discord, "Changed speed to　%s", strconv.FormatFloat(newSpeechSpeed, 'f', -1, 64))
+	return nil
+}
+
 // playAudioFile play audio file on the voice channel
 func (t *TtsSession) playAudioFile(filename string) error {
 	if err := t.VoiceConnection.Speaking(true); err != nil {
@@ -95,7 +107,7 @@ func (t *TtsSession) playAudioFile(filename string) error {
 	opts.CompressionLevel = 0
 	opts.RawOutput = true
 	opts.Bitrate = 120
-	opts.AudioFilter = fmt.Sprintf("atempo=%f", t.SpeechSpeed)
+	opts.AudioFilter = fmt.Sprintf("atempo=%f", t.speechSpeed)
 
 	encodeSession, err := dca.EncodeFile(filename, opts)
 	if err != nil {

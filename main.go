@@ -113,20 +113,13 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
-
-		speed, err := strconv.ParseFloat(speedStr, 64)
+		newSpeed, err := strconv.ParseFloat(speedStr, 64)
 		if err != nil {
 			ttsSession.SendMessage(discord, "数字ではない値は設定できません")
 			return
 		}
-		if speed < 0.5 || speed > 100 {
-			ttsSession.SendMessage(discord, "設定できるのは 0.5 ~ 100 の値です")
-			return
-		}
-
-		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
-			ttsSession.SpeechSpeed = float32(newSpeed)
-			ttsSession.SendMessage(discord, "速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32))
+		if err = ttsSession.SetSpeechSpeed(discord, newSpeed); err != nil {
+			log.Println(err)
 		}
 		return
 	}

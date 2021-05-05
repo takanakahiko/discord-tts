@@ -4,19 +4,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/url"
 	"os"
 	"os/signal"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/jonas747/dca"
 	"github.com/takanakahiko/discord-tts/session"
 )
 
@@ -139,23 +134,8 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	// ignore emoji, mention channel, group mention and url
-	if regexp.MustCompile(`<a:|<@|<#|<@&|http`).MatchString(m.Content) {
-		ttsSession.SendMessage(discord, "読み上げをスキップしました")
-		return
-	}
-
-	lang := "ja"
-	if regexp.MustCompile("^[a-zA-Z0-9\\s.,]+$").MatchString(m.Content) {
-		lang = "en"
-	}
-
-	// Speech
-	ttsSession.Mut.Lock()
-	defer ttsSession.Mut.Unlock()
-	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), lang)
-	if err := playAudioFile(ttsSession.VoiceConnection, voiceURL); err != nil {
-		ttsSession.SendMessage(discord, err.Error())
+	if err = ttsSession.Speech(discord, m.Content); err != nil {
+		log.Println(err)
 	}
 }
 
@@ -215,46 +195,4 @@ func findUserVoiceState(discord *discordgo.Session, userid string) (*discordgo.V
 		}
 	}
 	return nil, errors.New("could not find user's voice state")
-}
-
-//play audio file
-func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
-	if err := v.Speaking(true); err != nil {
-		return err
-	}
-	defer func() {
-		if err := v.Speaking(false); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	opts := dca.StdEncodeOptions
-	opts.CompressionLevel = 0
-	opts.RawOutput = true
-	opts.Bitrate = 120
-	opts.AudioFilter = fmt.Sprintf("atempo=%f", ttsSession.SpeechSpeed)
-
-	encodeSession, err := dca.EncodeFile(filename, opts)
-	if err != nil {
-		return err
-	}
-
-	done := make(chan error)
-	stream := dca.NewStream(encodeSession, v, done)
-	ticker := time.NewTicker(time.Second)
-
-	for {
-		select {
-		case err := <-done:
-			if err != nil && err != io.EOF {
-				return err
-			}
-			encodeSession.Truncate()
-			return nil
-		case <-ticker.C:
-			stats := encodeSession.Stats()
-			playbackPosition := stream.PlaybackPosition()
-			log.Printf("Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
-		}
-	}
 }

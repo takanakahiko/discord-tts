@@ -161,15 +161,6 @@ func isCommandMessage(message, command string) bool {
 	return strings.HasPrefix(message, botName()+" "+command)
 }
 
-func sendMessage(discord *discordgo.Session, channelID string, msg string) {
-	_, err := discord.ChannelMessageSend(channelID, "[BOT] "+msg)
-
-	log.Println(">>> " + msg)
-	if err != nil {
-		log.Println("Error sending message: ", err)
-	}
-}
-
 func joinUserVoiceChannel(discord *discordgo.Session, userID string) (*discordgo.VoiceConnection, error) {
 	vs, err := findUserVoiceState(discord, userID)
 	if err != nil {

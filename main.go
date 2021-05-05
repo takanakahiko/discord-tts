@@ -53,8 +53,6 @@ func main() {
 		}
 	}()
 
-	clientID = discord.State.User.ID
-
 	fmt.Println("Listening...")
 
 	sc := make(chan os.Signal, 1)
@@ -74,6 +72,11 @@ func botName() string {
 
 //event by message
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
+
+	// main 内でやると、なぜかときどき失敗するので、確実に取得できそうな場所でやる
+	// 確実に API が立たけるようになったタイミングでフックされる関数とかあったら、そこでやりたい
+	clientID = discord.State.User.ID
+
 	discordChannel, err := discord.Channel(m.ChannelID)
 	if err != nil {
 		log.Fatal(err)
@@ -160,14 +163,14 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdate) {
-	if voiceConnection == nil {
+	if voiceConnection == nil || !voiceConnection.Ready {
 		return
 	}
 
 	// ボイスチャンネルに誰かしらいたら return
 	for _, guild := range discord.State.Guilds {
 		for _, vs := range guild.VoiceStates {
-			if v.ChannelID == vs.ChannelID {
+			if voiceConnection.ChannelID == vs.ChannelID && vs.UserID != clientID {
 				return
 			}
 		}

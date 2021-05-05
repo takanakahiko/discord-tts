@@ -68,6 +68,18 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	return nil
 }
 
+// Leave end connection and init variables
+func (t *TtsSession) Leave(discord *discordgo.Session) error {
+	err := t.VoiceConnection.Disconnect()
+	if err != nil {
+		return fmt.Errorf("t.VoiceConnection.Disconnect() fail: %w", err)
+	}
+	t.VoiceConnection = nil
+	t.TextChanelID = ""
+	t.SendMessage(discord, "Left from voice chat...")
+	return nil
+}
+
 // playAudioFile play audio file on the voice channel
 func (t *TtsSession) playAudioFile(filename string) error {
 	if err := t.VoiceConnection.Speaking(true); err != nil {

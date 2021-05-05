@@ -106,13 +106,10 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	// other commands
 	switch {
 	case isCommandMessage(m.Content, "leave"):
-		err := ttsSession.VoiceConnection.Disconnect()
+		err := ttsSession.Leave(discord)
 		if err != nil {
-			ttsSession.SendMessage(discord, err.Error())
-			return
+			log.Println(err)
 		}
-		ttsSession.SendMessage(discord, "Left from voice chat...")
-		ttsSession.VoiceConnection = nil
 		return
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
@@ -154,14 +151,9 @@ func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdat
 	}
 
 	// ボイスチャンネルに誰もいなかったら Disconnect する
-	err := ttsSession.VoiceConnection.Disconnect()
+	err := ttsSession.Leave(discord)
 	if err != nil {
-		fmt.Printf("err=%+v", err)
-	}
-	ttsSession.VoiceConnection = nil
-
-	if ttsSession.TextChanelID != "" {
-		sendMessage(discord, ttsSession.TextChanelID, "Left from voice chat...")
+		log.Println(err)
 	}
 }
 

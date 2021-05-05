@@ -88,7 +88,7 @@ func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed f
 		return fmt.Errorf("newSpeechSpeed=%v is invalid", newSpeechSpeed)
 	}
 	t.speechSpeed = newSpeechSpeed
-	t.SendMessage(discord, "Changed speed to　%s", strconv.FormatFloat(newSpeechSpeed, 'f', -1, 64))
+	t.SendMessage(discord, "Changed speed to %s", strconv.FormatFloat(newSpeechSpeed, 'f', -1, 64))
 	return nil
 }
 

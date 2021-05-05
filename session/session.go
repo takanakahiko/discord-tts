@@ -17,7 +17,7 @@ import (
 type TtsSession struct {
 	TextChanelID    string
 	VoiceConnection *discordgo.VoiceConnection
-	Mut             sync.Mutex
+	mut             sync.Mutex
 	SpeechSpeed     float32
 }
 
@@ -26,7 +26,7 @@ func NewTtsSession() *TtsSession {
 	return &TtsSession{
 		TextChanelID:    "",
 		VoiceConnection: nil,
-		Mut:             sync.Mutex{},
+		mut:             sync.Mutex{},
 		SpeechSpeed:     1.0,
 	}
 }
@@ -56,8 +56,8 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 		lang = "en"
 	}
 
-	t.Mut.Lock()
-	defer t.Mut.Unlock()
+	t.mut.Lock()
+	defer t.mut.Unlock()
 
 	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
 	err := t.playAudioFile(voiceURL)

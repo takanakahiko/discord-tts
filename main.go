@@ -12,21 +12,18 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
+	"github.com/takanakahiko/discord-tts/session"
 )
 
 var (
-	textChanelID                               = ""
-	voiceConnection *discordgo.VoiceConnection = nil
-	mut             sync.Mutex
-	speechSpeed     float32 = 1.0
-	prefix                  = flag.String("prefix", "", "call prefix")
-	clientID                = ""
+	ttsSession = session.NewTtsSession()
+	prefix     = flag.String("prefix", "", "call prefix")
+	clientID   = ""
 )
 
 func main() {
@@ -92,35 +89,35 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
-		if voiceConnection != nil {
+		if ttsSession.VoiceConnection != nil {
 			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
 			return
 		}
-		voiceConnection, err = joinUserVoiceChannel(discord, m.Author.ID)
+		ttsSession.VoiceConnection, err = joinUserVoiceChannel(discord, m.Author.ID)
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 			return
 		}
-		textChanelID = m.ChannelID
+		ttsSession.TextChanelID = m.ChannelID
 		sendMessage(discord, m.ChannelID, "Joined to voice chat!")
 		return
 	}
 
 	// ignore case of "not join", "another channel" or "include ignore prefix"
-	if voiceConnection == nil || m.ChannelID != textChanelID || strings.HasPrefix(m.Content, ";") {
+	if ttsSession.VoiceConnection == nil || m.ChannelID != ttsSession.TextChanelID || strings.HasPrefix(m.Content, ";") {
 		return
 	}
 
 	// other commands
 	switch {
 	case isCommandMessage(m.Content, "leave"):
-		err := voiceConnection.Disconnect()
+		err := ttsSession.VoiceConnection.Disconnect()
 		if err != nil {
 			sendMessage(discord, m.ChannelID, err.Error())
 			return
 		}
 		sendMessage(discord, m.ChannelID, "Left from voice chat...")
-		voiceConnection = nil
+		ttsSession.VoiceConnection = nil
 		return
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
@@ -136,7 +133,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
-			speechSpeed = float32(newSpeed)
+			ttsSession.SpeechSpeed = float32(newSpeed)
 			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
 		}
 		return
@@ -154,37 +151,37 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// Speech
-	mut.Lock()
-	defer mut.Unlock()
+	ttsSession.Mut.Lock()
+	defer ttsSession.Mut.Unlock()
 	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), lang)
-	if err := playAudioFile(voiceConnection, voiceURL); err != nil {
+	if err := playAudioFile(ttsSession.VoiceConnection, voiceURL); err != nil {
 		sendMessage(discord, m.ChannelID, err.Error())
 	}
 }
 
 func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdate) {
-	if voiceConnection == nil || !voiceConnection.Ready {
+	if ttsSession.VoiceConnection == nil || !ttsSession.VoiceConnection.Ready {
 		return
 	}
 
 	// ボイスチャンネルに誰かしらいたら return
 	for _, guild := range discord.State.Guilds {
 		for _, vs := range guild.VoiceStates {
-			if voiceConnection.ChannelID == vs.ChannelID && vs.UserID != clientID {
+			if ttsSession.VoiceConnection.ChannelID == vs.ChannelID && vs.UserID != clientID {
 				return
 			}
 		}
 	}
 
 	// ボイスチャンネルに誰もいなかったら Disconnect する
-	err := voiceConnection.Disconnect()
+	err := ttsSession.VoiceConnection.Disconnect()
 	if err != nil {
 		fmt.Printf("err=%+v", err)
 	}
-	voiceConnection = nil
+	ttsSession.VoiceConnection = nil
 
-	if textChanelID != "" {
-		sendMessage(discord, textChanelID, "Left from voice chat...")
+	if ttsSession.TextChanelID != "" {
+		sendMessage(discord, ttsSession.TextChanelID, "Left from voice chat...")
 	}
 }
 
@@ -235,7 +232,7 @@ func playAudioFile(v *discordgo.VoiceConnection, filename string) error {
 	opts.CompressionLevel = 0
 	opts.RawOutput = true
 	opts.Bitrate = 120
-	opts.AudioFilter = fmt.Sprintf("atempo=%f", speechSpeed)
+	opts.AudioFilter = fmt.Sprintf("atempo=%f", ttsSession.SpeechSpeed)
 
 	encodeSession, err := dca.EncodeFile(filename, opts)
 	if err != nil {

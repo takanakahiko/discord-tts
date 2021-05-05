@@ -53,7 +53,7 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	}
 
 	lang := "ja"
-	if regexp.MustCompile("^[a-zA-Z0-9\\s.,]+$").MatchString(text) {
+	if regexp.MustCompile(`^[a-zA-Z0-9\s.,]+$`).MatchString(text) {
 		lang = "en"
 	}
 

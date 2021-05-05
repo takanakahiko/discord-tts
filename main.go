@@ -48,10 +48,8 @@ func main() {
 	fmt.Println("Listening...")
 
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
-
-	return
 }
 
 func botName() string {

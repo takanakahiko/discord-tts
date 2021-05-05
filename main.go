@@ -90,16 +90,16 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
 		if ttsSession.VoiceConnection != nil {
-			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
+			ttsSession.SendMessage(discord, "Bot is already in voice-chat.")
 			return
 		}
 		ttsSession.VoiceConnection, err = joinUserVoiceChannel(discord, m.Author.ID)
 		if err != nil {
-			sendMessage(discord, m.ChannelID, err.Error())
+			ttsSession.SendMessage(discord, err.Error())
 			return
 		}
 		ttsSession.TextChanelID = m.ChannelID
-		sendMessage(discord, m.ChannelID, "Joined to voice chat!")
+		ttsSession.SendMessage(discord, "Joined to voice chat!")
 		return
 	}
 
@@ -113,10 +113,10 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	case isCommandMessage(m.Content, "leave"):
 		err := ttsSession.VoiceConnection.Disconnect()
 		if err != nil {
-			sendMessage(discord, m.ChannelID, err.Error())
+			ttsSession.SendMessage(discord, err.Error())
 			return
 		}
-		sendMessage(discord, m.ChannelID, "Left from voice chat...")
+		ttsSession.SendMessage(discord, "Left from voice chat...")
 		ttsSession.VoiceConnection = nil
 		return
 	case isCommandMessage(m.Content, "speed"):
@@ -124,24 +124,24 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 		speed, err := strconv.ParseFloat(speedStr, 64)
 		if err != nil {
-			sendMessage(discord, m.ChannelID, "数字ではない値は設定できません")
+			ttsSession.SendMessage(discord, "数字ではない値は設定できません")
 			return
 		}
 		if speed < 0.5 || speed > 100 {
-			sendMessage(discord, m.ChannelID, "設定できるのは 0.5 ~ 100 の値です")
+			ttsSession.SendMessage(discord, "設定できるのは 0.5 ~ 100 の値です")
 			return
 		}
 
 		if newSpeed, err := strconv.ParseFloat(speedStr, 32); err == nil {
 			ttsSession.SpeechSpeed = float32(newSpeed)
-			sendMessage(discord, m.ChannelID, fmt.Sprintf("速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32)))
+			ttsSession.SendMessage(discord, "速度を%sに変更しました", strconv.FormatFloat(newSpeed, 'f', -1, 32))
 		}
 		return
 	}
 
 	// ignore emoji, mention channel, group mention and url
 	if regexp.MustCompile(`<a:|<@|<#|<@&|http`).MatchString(m.Content) {
-		sendMessage(discord, m.ChannelID, "読み上げをスキップしました")
+		ttsSession.SendMessage(discord, "読み上げをスキップしました")
 		return
 	}
 
@@ -155,7 +155,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	defer ttsSession.Mut.Unlock()
 	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(m.Content), lang)
 	if err := playAudioFile(ttsSession.VoiceConnection, voiceURL); err != nil {
-		sendMessage(discord, m.ChannelID, err.Error())
+		ttsSession.SendMessage(discord, err.Error())
 	}
 }
 

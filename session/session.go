@@ -1,6 +1,8 @@
 package session
 
 import (
+	"fmt"
+	"log"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -21,5 +23,18 @@ func NewTtsSession() *TtsSession {
 		VoiceConnection: nil,
 		Mut:             sync.Mutex{},
 		SpeechSpeed:     1.0,
+	}
+}
+
+// SendMessage send text to text chat
+func (t *TtsSession) SendMessage(discord *discordgo.Session, format string, v ...interface{}) {
+	if t.TextChanelID == "" {
+		log.Println("Error sending message: TextChanelID is not set")
+	}
+	msg := fmt.Sprintf(format, v...)
+	_, err := discord.ChannelMessageSend(t.TextChanelID, "[BOT] "+msg)
+	log.Println(">>> " + msg)
+	if err != nil {
+		log.Println("Error sending message: ", err)
 	}
 }

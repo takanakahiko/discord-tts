@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -32,6 +31,7 @@ func main() {
 	}
 
 	discord.Token = "Bot " + os.Getenv("TOKEN")
+	discord.AddHandler(onReady)
 	discord.AddHandler(onMessageCreate)
 	discord.AddHandler(onVoiceStateUpdate)
 
@@ -60,12 +60,14 @@ func botName() string {
 	return *prefix
 }
 
-//event by message
-func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
-
+func onReady(discord *discordgo.Session, r *discordgo.Ready) {
 	// main 内でやると、なぜかときどき失敗するので、確実に取得できそうな場所でやる
 	// 確実に API が立たけるようになったタイミングでフックされる関数とかあったら、そこでやりたい
 	clientID = discord.State.User.ID
+}
+
+//event by message
+func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	discordChannel, err := discord.Channel(m.ChannelID)
 	if err != nil {
@@ -143,23 +145,4 @@ func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdat
 
 func isCommandMessage(message, command string) bool {
 	return strings.HasPrefix(message, botName()+" "+command)
-}
-
-func joinUserVoiceChannel(discord *discordgo.Session, userID string) (*discordgo.VoiceConnection, error) {
-	vs, err := findUserVoiceState(discord, userID)
-	if err != nil {
-		return nil, err
-	}
-	return discord.ChannelVoiceJoin(vs.GuildID, vs.ChannelID, false, true)
-}
-
-func findUserVoiceState(discord *discordgo.Session, userid string) (*discordgo.VoiceState, error) {
-	for _, guild := range discord.State.Guilds {
-		for _, vs := range guild.VoiceStates {
-			if vs.UserID == userid {
-				return vs, nil
-			}
-		}
-	}
-	return nil, errors.New("could not find user's voice state")
 }

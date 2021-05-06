@@ -5,7 +5,6 @@ text to speech bot for discord
 
 ```bash
 $ export TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-$ export CLIENT_ID=YYYYYYYYYYYYYYYY
 $ go run main.go
 ```
 

@@ -32,6 +32,40 @@ func NewTtsSession() *TtsSession {
 	}
 }
 
+// Join join the same channel as the caller
+func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelID string) error {
+	if t.VoiceConnection != nil {
+		t.SendMessage(discord, "Bot is already in voice-chat.")
+		return fmt.Errorf("bot is already in voice-chat")
+	}
+
+	var callUserVoiceState *discordgo.VoiceState = nil
+	for _, guild := range discord.State.Guilds {
+		for _, vs := range guild.VoiceStates {
+			if vs.UserID == callerUserID {
+				callUserVoiceState = vs
+			}
+		}
+	}
+	if callUserVoiceState == nil {
+		t.SendMessage(discord, "Caller is not in voice-chat.")
+		return fmt.Errorf("caller is not in voice-chat")
+	}
+
+	voiceConnection, err := discord.ChannelVoiceJoin(
+		callUserVoiceState.GuildID, callUserVoiceState.ChannelID, false, true)
+	if err != nil {
+		t.SendMessage(discord, err.Error())
+		return fmt.Errorf(
+			"failed ChannelVoiceJoin(gID=%s, cID=%s, mute=false, deaf=true): %w",
+			callUserVoiceState.GuildID, callUserVoiceState.ChannelID, err)
+	}
+	t.VoiceConnection = voiceConnection
+	t.TextChanelID = textChannelID
+	t.SendMessage(discord, "Joined to voice chat!")
+	return nil
+}
+
 // SendMessage send text to text chat
 func (t *TtsSession) SendMessage(discord *discordgo.Session, format string, v ...interface{}) {
 	if t.TextChanelID == "" {

@@ -82,17 +82,10 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
-		if ttsSession.VoiceConnection != nil {
-			ttsSession.SendMessage(discord, "Bot is already in voice-chat.")
-			return
-		}
-		ttsSession.VoiceConnection, err = joinUserVoiceChannel(discord, m.Author.ID)
+		err := ttsSession.Join(discord, m.Author.ID, m.ChannelID)
 		if err != nil {
-			ttsSession.SendMessage(discord, err.Error())
-			return
+			log.Println(err)
 		}
-		ttsSession.TextChanelID = m.ChannelID
-		ttsSession.SendMessage(discord, "Joined to voice chat!")
 		return
 	}
 

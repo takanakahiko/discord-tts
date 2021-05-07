@@ -35,7 +35,6 @@ func NewTtsSession() *TtsSession {
 // Join join the same channel as the caller
 func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelID string) error {
 	if t.VoiceConnection != nil {
-		t.SendMessage(discord, "Bot is already in voice-chat.")
 		return fmt.Errorf("bot is already in voice-chat")
 	}
 

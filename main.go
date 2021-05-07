@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ttsSession = session.NewTtsSession()
+	sessionManager = session.NewTtsSessionManager()
 	prefix     = flag.String("prefix", "", "call prefix")
 	clientID   = ""
 )
@@ -78,21 +78,42 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// bot check
-	if m.Author.Bot {
+	if m.Author.Bot || strings.HasPrefix(m.Content, ";") {
 		return
 	}
 
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
-		err := ttsSession.Join(discord, m.Author.ID, m.ChannelID)
+		ttsSession, err := sessionManager.GetByTextChannelID(m.ChannelID)
+		if err == session.ErrTtsSessionNotFound {
+			ttsSession := session.NewTtsSession()
+			err := ttsSession.Join(discord, m.Author.ID, m.ChannelID)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			err = sessionManager.Add(ttsSession)
+			if err != nil {
+				log.Println(err)
+			}
+			return
+		}
 		if err != nil {
 			log.Println(err)
+			return
 		}
+		ttsSession.SendMessage(discord, "Bot is already in voice-chat.")
 		return
 	}
 
-	// ignore case of "not join", "another channel" or "include ignore prefix"
-	if ttsSession.VoiceConnection == nil || m.ChannelID != ttsSession.TextChanelID || strings.HasPrefix(m.Content, ";") {
+	// ignore case of "not join" or "include ignore prefix"
+	ttsSession, err := sessionManager.GetByTextChannelID(m.ChannelID)
+	if err == session.ErrTtsSessionNotFound {
+		log.Println(err)
+		return
+	}
+	if err != nil  {
+		log.Println(err)
 		return
 	}
 
@@ -103,6 +124,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		if err != nil {
 			log.Println(err)
 		}
+		sessionManager.Remove(ttsSession.TextChanelID)
 		return
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
@@ -123,6 +145,15 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdate) {
+	ttsSession, err := sessionManager.GetByVoiceChannelID(v.ChannelID)
+	if err == session.ErrTtsSessionNotFound {
+		return
+	}
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	if ttsSession.VoiceConnection == nil || !ttsSession.VoiceConnection.Ready {
 		return
 	}
@@ -137,7 +168,7 @@ func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdat
 	}
 
 	// ボイスチャンネルに誰もいなかったら Disconnect する
-	err := ttsSession.Leave(discord)
+	err = ttsSession.Leave(discord)
 	if err != nil {
 		log.Println(err)
 	}

@@ -108,9 +108,9 @@ func (t *TtsSession) Leave(discord *discordgo.Session) error {
 	if err != nil {
 		return fmt.Errorf("t.VoiceConnection.Disconnect() fail: %w", err)
 	}
+	t.SendMessage(discord, "Left from voice chat...")
 	t.VoiceConnection = nil
 	t.TextChanelID = ""
-	t.SendMessage(discord, "Left from voice chat...")
 	return nil
 }
 

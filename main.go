@@ -16,8 +16,8 @@ import (
 
 var (
 	sessionManager = session.NewTtsSessionManager()
-	prefix     = flag.String("prefix", "", "call prefix")
-	clientID   = ""
+	prefix         = flag.String("prefix", "", "call prefix")
+	clientID       = ""
 )
 
 func main() {
@@ -104,10 +104,9 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	// ignore case of "not join" or "include ignore prefix"
 	ttsSession, err := sessionManager.GetByTextChannelID(m.ChannelID)
 	if err == session.ErrTtsSessionNotFound {
-		log.Println(err)
 		return
 	}
-	if err != nil  {
+	if err != nil {
 		log.Println(err)
 		return
 	}

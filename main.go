@@ -35,8 +35,7 @@ func main() {
 	discord.AddHandler(onMessageCreate)
 	discord.AddHandler(onVoiceStateUpdate)
 
-	err = discord.Open()
-	if err != nil {
+	if err = discord.Open(); err != nil {
 		fmt.Println(err)
 	}
 	defer func() {
@@ -61,8 +60,6 @@ func botName() string {
 }
 
 func onReady(discord *discordgo.Session, r *discordgo.Ready) {
-	// main 内でやると、なぜかときどき失敗するので、確実に取得できそうな場所でやる
-	// 確実に API が立たけるようになったタイミングでフックされる関数とかあったら、そこでやりたい
 	clientID = discord.State.User.ID
 }
 
@@ -87,13 +84,11 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		ttsSession, err := sessionManager.GetByTextChannelID(m.ChannelID)
 		if err == session.ErrTtsSessionNotFound {
 			ttsSession := session.NewTtsSession()
-			err := ttsSession.Join(discord, m.Author.ID, m.ChannelID)
-			if err != nil {
+			if err := ttsSession.Join(discord, m.Author.ID, m.ChannelID); err != nil {
 				log.Println(err)
 				return
 			}
-			err = sessionManager.Add(ttsSession)
-			if err != nil {
+			if err = sessionManager.Add(ttsSession); err != nil {
 				log.Println(err)
 			}
 			return
@@ -120,11 +115,12 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	// other commands
 	switch {
 	case isCommandMessage(m.Content, "leave"):
-		err := ttsSession.Leave(discord)
-		if err != nil {
+		if err := ttsSession.Leave(discord); err != nil {
 			log.Println(err)
 		}
-		sessionManager.Remove(ttsSession.TextChanelID)
+		if err := sessionManager.Remove(ttsSession.TextChanelID); err != nil {
+			log.Println(err)
+		}
 		return
 	case isCommandMessage(m.Content, "speed"):
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)

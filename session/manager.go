@@ -12,6 +12,7 @@ type TtsSessionManager struct {
 	sessions []*TtsSession
 }
 
+// NewTtsSession create new TtsSessionManager
 func NewTtsSessionManager() *TtsSessionManager {
 	return &TtsSessionManager{
 		sessions: []*TtsSession{},

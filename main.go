@@ -12,6 +12,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/takanakahiko/discord-tts/session"
+	"github.com/takanakahiko/discord-tts/logger"
 )
 
 var (
@@ -40,7 +41,7 @@ func main() {
 	}
 	defer func() {
 		if err := discord.Close(); err != nil {
-			log.Fatal(err)
+			logger.PrintError(err)
 		}
 	}()
 
@@ -85,11 +86,11 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		if err == session.ErrTtsSessionNotFound {
 			ttsSession := session.NewTtsSession()
 			if err := ttsSession.Join(discord, m.Author.ID, m.ChannelID); err != nil {
-				log.Println(err)
+				logger.PrintError(err)
 				return
 			}
 			if err = sessionManager.Add(ttsSession); err != nil {
-				log.Println(err)
+				logger.PrintError(err)
 			}
 			return
 		}
@@ -107,7 +108,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	if err != nil {
-		log.Println(err)
+		logger.PrintError(err)
 		return
 	}
 
@@ -115,10 +116,10 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	switch {
 	case isCommandMessage(m.Content, "leave"):
 		if err := ttsSession.Leave(discord); err != nil {
-			log.Println(err)
+			logger.PrintError(err)
 		}
 		if err := sessionManager.Remove(ttsSession.TextChanelID); err != nil {
-			log.Println(err)
+			logger.PrintError(err)
 		}
 		return
 	case isCommandMessage(m.Content, "speed"):
@@ -129,7 +130,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 		if err = ttsSession.SetSpeechSpeed(discord, newSpeed); err != nil {
-			log.Println(err)
+			logger.PrintError(err)
 		}
 		return
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var(
+var (
 	ErrTtsSessionNotFound = fmt.Errorf("ttsSession not found")
 )
 
@@ -19,21 +19,11 @@ func NewTtsSessionManager() *TtsSessionManager {
 	}
 }
 
-// GetByTextChannelID
-func (t *TtsSessionManager) GetByTextChannelID(textChannelID string) (*TtsSession, error) {
-	for _, v := range t.sessions {
-		if v.TextChanelID == textChannelID {
-			return v, nil
-		}
-	}
-	return nil, ErrTtsSessionNotFound
-}
-
-// GetByVoiceChannelID
-func (t *TtsSessionManager) GetByVoiceChannelID(voiceChannelID string) (*TtsSession, error) {
-	for _, v := range t.sessions {
-		if v.VoiceConnection.ChannelID == voiceChannelID {
-			return v, nil
+// GetByGuidID
+func (t *TtsSessionManager) GetByGuidID(guidID string) (*TtsSession, error) {
+	for _, s := range t.sessions {
+		if s.GuidID() == guidID {
+			return s, nil
 		}
 	}
 	return nil, ErrTtsSessionNotFound
@@ -41,7 +31,7 @@ func (t *TtsSessionManager) GetByVoiceChannelID(voiceChannelID string) (*TtsSess
 
 // Add
 func (t *TtsSessionManager) Add(ttsSession *TtsSession) error {
-	_, err := t.GetByTextChannelID(ttsSession.TextChanelID)
+	_, err := t.GetByGuidID(ttsSession.GuidID())
 	if err != ErrTtsSessionNotFound {
 		return fmt.Errorf("ttsSession is already in voice-chat")
 	}

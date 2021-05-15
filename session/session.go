@@ -32,6 +32,11 @@ func NewTtsSession() *TtsSession {
 	}
 }
 
+// GetByGuidID
+func (t *TtsSession) GuidID() string {
+	return t.VoiceConnection.GuildID
+}
+
 // Join join the same channel as the caller
 func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelID string) error {
 	if t.VoiceConnection != nil {
@@ -80,7 +85,7 @@ func (t *TtsSession) SendMessage(discord *discordgo.Session, format string, v ..
 
 // Speech speech the received text on the voice channel
 func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
-	if regexp.MustCompile(`<a:|<@|<#|<@&|http|` + "```" + ``).MatchString(text) {
+	if regexp.MustCompile(`<a:|<@|<#|<@&|http|` + "```").MatchString(text) {
 		t.SendMessage(discord, "Skipped reading")
 		return fmt.Errorf("text is emoji, mention channel, group mention or url")
 	}

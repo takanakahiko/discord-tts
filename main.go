@@ -11,8 +11,8 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/takanakahiko/discord-tts/session"
 	"github.com/takanakahiko/discord-tts/logger"
+	"github.com/takanakahiko/discord-tts/session"
 )
 
 var (
@@ -82,33 +82,38 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
-		ttsSession, err := sessionManager.GetByTextChannelID(m.ChannelID)
-		if err == session.ErrTtsSessionNotFound {
-			ttsSession := session.NewTtsSession()
-			if err := ttsSession.Join(discord, m.Author.ID, m.ChannelID); err != nil {
-				logger.PrintError(err)
-				return
-			}
-			if err = sessionManager.Add(ttsSession); err != nil {
-				logger.PrintError(err)
-			}
-			return
-		}
-		if err != nil {
+		_, err := sessionManager.GetByGuidID(m.GuildID)
+		if err != nil && err != session.ErrTtsSessionNotFound {
 			log.Println(err)
 			return
 		}
-		ttsSession.SendMessage(discord, "Bot is already in voice-chat.")
+		if err == nil {
+			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
+			return
+		}
+		ttsSession := session.NewTtsSession()
+		if err := ttsSession.Join(discord, m.Author.ID, m.ChannelID); err != nil {
+			logger.PrintError(err)
+			return
+		}
+		if err = sessionManager.Add(ttsSession); err != nil {
+			logger.PrintError(err)
+		}
 		return
 	}
 
 	// ignore case of "not join" or "include ignore prefix"
-	ttsSession, err := sessionManager.GetByTextChannelID(m.ChannelID)
+	ttsSession, err := sessionManager.GetByGuidID(m.GuildID)
 	if err == session.ErrTtsSessionNotFound {
 		return
 	}
 	if err != nil {
 		logger.PrintError(err)
+		return
+	}
+
+	// Ignore if the TextChanelID of session and the channel of the message are different
+	if ttsSession.TextChanelID != m.ChannelID {
 		return
 	}
 
@@ -141,7 +146,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdate) {
-	ttsSession, err := sessionManager.GetByVoiceChannelID(v.ChannelID)
+	ttsSession, err := sessionManager.GetByGuidID(v.GuildID)
 	if err == session.ErrTtsSessionNotFound {
 		return
 	}
@@ -172,4 +177,10 @@ func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdat
 
 func isCommandMessage(message, command string) bool {
 	return strings.HasPrefix(message, botName()+" "+command)
+}
+
+func sendMessage(discord *discordgo.Session, textChanelID, format string, v ...interface{}) {
+	session := session.NewTtsSession()
+	session.TextChanelID = textChanelID
+	session.SendMessage(discord, format, v...)
 }

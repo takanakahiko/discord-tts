@@ -40,10 +40,10 @@ func (t *TtsSessionManager) Add(ttsSession *TtsSession) error {
 }
 
 // Remove
-func (t *TtsSessionManager) Remove(textChannelID string) error {
+func (t *TtsSessionManager) Remove(guidID string) error {
 	var ret []*TtsSession
 	for _, v := range t.sessions {
-		if v.TextChanelID == textChannelID {
+		if v.GuidID() == guidID {
 			continue
 		}
 		ret = append(ret, v)

@@ -169,6 +169,9 @@ func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdat
 	}
 
 	// ボイスチャンネルに誰もいなかったら Disconnect する
+	if err := sessionManager.Remove(v.GuildID); err != nil {
+		log.Println(err)
+	}
 	err = ttsSession.Leave(discord)
 	if err != nil {
 		log.Println(err)

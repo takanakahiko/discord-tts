@@ -20,6 +20,7 @@ type TtsSession struct {
 	VoiceConnection *discordgo.VoiceConnection
 	mut             sync.Mutex
 	speechSpeed     float64
+	speechLanguage  string
 }
 
 // NewTtsSession create new TtsSession
@@ -29,6 +30,7 @@ func NewTtsSession() *TtsSession {
 		VoiceConnection: nil,
 		mut:             sync.Mutex{},
 		speechSpeed:     1.0,
+		speechLanguage:  "auto"
 	}
 }
 
@@ -90,9 +92,12 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 		return fmt.Errorf("text is emoji, mention channel, group mention or url")
 	}
 
-	lang := "ja"
-	if regexp.MustCompile(`^[a-zA-Z0-9\s.,]+$`).MatchString(text) {
-		lang = "en"
+	lang := t.speechLanguage
+	if lang == "auto" {
+		lang = "ja"
+		if regexp.MustCompile(`^[a-zA-Z0-9\s.,]+$`).MatchString(text) {
+			lang = "en"
+		}
 	}
 
 	t.mut.Lock()
@@ -127,6 +132,22 @@ func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed f
 	}
 	t.speechSpeed = newSpeechSpeed
 	t.SendMessage(discord, "Changed speed to %s", strconv.FormatFloat(newSpeechSpeed, 'f', -1, 64))
+	return nil
+}
+
+// SetLanguage 
+func (t *TtsSession) SetLanguage(discord *discordgo.Session, lang string) error {
+	if lang == "auto" {
+		t.speechLanguage = lang
+		return nil
+	}
+
+	_, err := language.Parse(lang)
+	if err != nil {
+			fmt.Println(s)
+			return fmt.Errorf("Language.Parse() fail: %w", err)
+	}
+	t.speechLanguage = lang
 	return nil
 }
 

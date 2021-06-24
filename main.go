@@ -138,6 +138,12 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 			logger.PrintError(err)
 		}
 		return
+	case isCommandMessage(m.Content, "lang"):
+		newLang := strings.Replace(m.Content, botName()+" lang ", "", 1)
+		if err = ttsSession.SetLanguage(discord, newLang); err != nil {
+			logger.PrintError(err)
+		}
+		return
 	}
 
 	if err = ttsSession.Speech(discord, m.Content); err != nil {

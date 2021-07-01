@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/text/language"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
 )
@@ -30,7 +32,7 @@ func NewTtsSession() *TtsSession {
 		VoiceConnection: nil,
 		mut:             sync.Mutex{},
 		speechSpeed:     1.0,
-		speechLanguage:  "auto"
+		speechLanguage:  "auto",
 	}
 }
 
@@ -135,7 +137,7 @@ func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed f
 	return nil
 }
 
-// SetLanguage 
+// SetLanguage
 func (t *TtsSession) SetLanguage(discord *discordgo.Session, lang string) error {
 	if lang == "auto" {
 		t.speechLanguage = lang
@@ -144,8 +146,7 @@ func (t *TtsSession) SetLanguage(discord *discordgo.Session, lang string) error 
 
 	_, err := language.Parse(lang)
 	if err != nil {
-			fmt.Println(s)
-			return fmt.Errorf("Language.Parse() fail: %w", err)
+		return fmt.Errorf("Language.Parse() fail: %w", err)
 	}
 	t.speechLanguage = lang
 	return nil

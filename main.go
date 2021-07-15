@@ -79,7 +79,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	log.Printf("onMessageCreate\n server: %s\n ch: %s\nuser: %s\n message: %s\n", guild.Name, discordChannel.Name, m.Author.Username, m.Content)
+	log.Printf("onMessageCreate\n server: %s\n ch: %s\n user: %s\n message: %s\n", guild.Name, discordChannel.Name, m.Author.Username, m.Content)
 
 	// bot check
 	if m.Author.Bot || strings.HasPrefix(m.Content, ";") {

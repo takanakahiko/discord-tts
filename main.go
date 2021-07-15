@@ -129,7 +129,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		if err := ttsSession.Leave(discord); err != nil {
 			logger.PrintError(err)
 		}
-		if err := sessionManager.Remove(ttsSession.TextChanelID); err != nil {
+		if err := sessionManager.Remove(ttsSession.GuidID()); err != nil {
 			logger.PrintError(err)
 		}
 		return

@@ -71,9 +71,15 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	if err != nil {
 		log.Fatal(err)
 		return
-	} else {
-		log.Printf("ch:%s user:%s > %s\n", discordChannel.Name, m.Author.Username, m.Content)
 	}
+
+	guild, err := discord.Guild(m.GuildID)
+	if err != nil && err != session.ErrTtsSessionNotFound {
+		log.Println(err)
+		return
+	}
+
+	log.Printf("onMessageCreate\n server: %s\n ch: %s\nuser: %s\n message: %s\n", guild.Name, discordChannel.Name, m.Author.Username, m.Content)
 
 	// bot check
 	if m.Author.Bot || strings.HasPrefix(m.Content, ";") {

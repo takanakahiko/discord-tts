@@ -23,6 +23,7 @@ type TtsSession struct {
 	mut             sync.Mutex
 	speechSpeed     float64
 	speechLanguage  string
+	guildID         string
 }
 
 // NewTtsSession create new TtsSession
@@ -38,7 +39,7 @@ func NewTtsSession() *TtsSession {
 
 // GetByGuidID
 func (t *TtsSession) GuidID() string {
-	return t.VoiceConnection.GuildID
+	return t.guildID
 }
 
 // Join join the same channel as the caller
@@ -70,6 +71,7 @@ func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelI
 	}
 	t.VoiceConnection = voiceConnection
 	t.TextChanelID = textChannelID
+	t.guildID = voiceConnection.GuildID
 	t.SendMessage(discord, "Joined to voice chat!")
 	return nil
 }

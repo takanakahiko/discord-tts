@@ -2,6 +2,11 @@
 
 text to speech bot for discord
 
+## require
+
+- goenv
+- ffmpeg
+
 ## run
 
 ```bash

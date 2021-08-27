@@ -96,6 +96,8 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 		return fmt.Errorf("text is emoji, mention channel, group mention or url")
 	}
 
+	text = regexp.MustCompile(`<:(.+):[0-9]+>`).ReplaceAllString(text, "$1")
+
 	lang := t.speechLanguage
 	if lang == "auto" {
 		lang = "ja"

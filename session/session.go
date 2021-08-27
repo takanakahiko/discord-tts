@@ -72,7 +72,7 @@ func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelI
 	t.VoiceConnection = voiceConnection
 	t.TextChanelID = textChannelID
 	t.guildID = voiceConnection.GuildID
-	t.SendMessage(discord, "Joined to voice chat!\n speechSpeed:%f\n speechLanguage:%s", t.speechSpeed, t.speechLanguage)
+	t.SendMessage(discord, "Joined to voice chat!\n speechSpeed:%g\n speechLanguage:%s", t.speechSpeed, t.speechLanguage)
 	return nil
 }
 

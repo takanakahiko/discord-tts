@@ -42,6 +42,11 @@ func (t *TtsSession) GuidID() string {
 	return t.guildID
 }
 
+// Get state of VoiceConnection
+func (t *TtsSession) IsConnected() bool {
+	return t.VoiceConnection != nil && t.VoiceConnection.Ready
+}
+
 // Join join the same channel as the caller
 func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelID string) error {
 	if t.VoiceConnection != nil {
@@ -82,9 +87,8 @@ func (t *TtsSession) SendMessage(discord *discordgo.Session, format string, v ..
 		log.Println("Error sending message: TextChanelID is not set")
 	}
 	msg := fmt.Sprintf(format, v...)
-	_, err := discord.ChannelMessageSend(t.TextChanelID, "[BOT] "+msg)
 	log.Println(">>> " + msg)
-	if err != nil {
+	if _, err := discord.ChannelMessageSend(t.TextChanelID, "[BOT] "+msg); err != nil {
 		log.Println("Error sending message: ", err)
 	}
 }
@@ -97,6 +101,7 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	}
 
 	text = regexp.MustCompile(`<:(.+):[0-9]+>`).ReplaceAllString(text, "$1")
+	text = regexp.MustCompile(`_`).ReplaceAllString(text, "")
 
 	lang := t.speechLanguage
 	if lang == "auto" {
@@ -110,8 +115,7 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	defer t.mut.Unlock()
 
 	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
-	err := t.playAudioFile(voiceURL)
-	if err != nil {
+	if err := t.playAudioFile(voiceURL); err != nil {
 		t.SendMessage(discord, "err=%s", err.Error())
 		return fmt.Errorf("t.playAudioFile(voiceURL:%+v) fail: %w", voiceURL, err)
 	}
@@ -120,8 +124,7 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 
 // Leave end connection and init variables
 func (t *TtsSession) Leave(discord *discordgo.Session) error {
-	err := t.VoiceConnection.Disconnect()
-	if err != nil {
+	if err := t.VoiceConnection.Disconnect(); err != nil {
 		return fmt.Errorf("t.VoiceConnection.Disconnect() fail: %w", err)
 	}
 	t.SendMessage(discord, "Left from voice chat...")
@@ -142,17 +145,20 @@ func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed f
 }
 
 // SetLanguage
-func (t *TtsSession) SetLanguage(discord *discordgo.Session, lang string) error {
-	if lang == "auto" {
-		t.speechLanguage = lang
+func (t *TtsSession) SetLanguage(discord *discordgo.Session, langText string) error {
+	if langText == "auto" {
+		t.speechLanguage = langText
+		t.SendMessage(discord, "Changed language to '%s'", t.speechLanguage)
 		return nil
 	}
 
-	_, err := language.Parse(lang)
-	if err != nil {
+	if lang, err := language.Parse(langText); err != nil {
 		return fmt.Errorf("Language.Parse() fail: %w", err)
+	} else {
+		t.speechLanguage = lang.String()
 	}
-	t.speechLanguage = lang
+
+	t.SendMessage(discord, "Changed language to '%s'", t.speechLanguage)
 	return nil
 }
 
@@ -188,7 +194,7 @@ func (t *TtsSession) playAudioFile(filename string) error {
 			if err != nil && err != io.EOF {
 				return err
 			}
-			encodeSession.Truncate()
+			encodeSession.Cleanup()
 			return nil
 		case <-ticker.C:
 			stats := encodeSession.Stats()

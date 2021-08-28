@@ -67,19 +67,19 @@ func onReady(discord *discordgo.Session, r *discordgo.Ready) {
 //event by message
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
-	discordChannel, err := discord.Channel(m.ChannelID)
-	if err != nil {
-		log.Fatal(err)
-		return
+	{
+		discordChannel, err := discord.Channel(m.ChannelID)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		guild, err := discord.Guild(m.GuildID)
+		if err != nil && err != session.ErrTtsSessionNotFound {
+			log.Println(err)
+			return
+		}
+		log.Printf("onMessageCreate\n server: %s\n ch: %s\n user: %s\n message: %s\n", guild.Name, discordChannel.Name, m.Author.Username, m.Content)
 	}
-
-	guild, err := discord.Guild(m.GuildID)
-	if err != nil && err != session.ErrTtsSessionNotFound {
-		log.Println(err)
-		return
-	}
-
-	log.Printf("onMessageCreate\n server: %s\n ch: %s\n user: %s\n message: %s\n", guild.Name, discordChannel.Name, m.Author.Username, m.Content)
 
 	// bot check
 	if m.Author.Bot || strings.HasPrefix(m.Content, ";") {
@@ -88,13 +88,11 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
-		_, err := sessionManager.GetByGuidID(m.GuildID)
-		if err != nil && err != session.ErrTtsSessionNotFound {
-			log.Println(err)
-			return
-		}
-		if err == nil {
+		if _, err := sessionManager.GetByGuidID(m.GuildID); err == nil {
 			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
+			return
+		} else if err != session.ErrTtsSessionNotFound {
+			log.Println(err)
 			return
 		}
 		ttsSession := session.NewTtsSession()
@@ -102,7 +100,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 			logger.PrintError(err)
 			return
 		}
-		if err = sessionManager.Add(ttsSession); err != nil {
+		if err := sessionManager.Add(ttsSession); err != nil {
 			logger.PrintError(err)
 		}
 		return
@@ -167,7 +165,7 @@ func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdat
 		return
 	}
 
-	if ttsSession.VoiceConnection == nil || !ttsSession.VoiceConnection.Ready {
+	if !ttsSession.IsConnected() {
 		return
 	}
 
@@ -184,8 +182,7 @@ func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdat
 	if err := sessionManager.Remove(v.GuildID); err != nil {
 		log.Println(err)
 	}
-	err = ttsSession.Leave(discord)
-	if err != nil {
+	if err = ttsSession.Leave(discord); err != nil {
 		log.Println(err)
 	}
 }

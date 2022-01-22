@@ -17,6 +17,8 @@ import (
 	"github.com/jonas747/dca"
 )
 
+const DefaultcontentId = "86fe0015-860a-409e-a79e-ff2d5dd818fd"
+
 // TtsSession is a data structure for managing bot agents that participate in one voice channel
 type TtsSession struct {
 	TextChanelID    string
@@ -36,7 +38,7 @@ func NewTtsSession() *TtsSession {
 		mut:             sync.Mutex{},
 		speechSpeed:     1.5,
 		speechLanguage:  "auto",
-		coefontID:       "5af5520c-e976-43fe-9fa5-ed37ffd781f3",
+		coefontID:       DefaultcontentId,
 	}
 }
 
@@ -117,13 +119,7 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
-	voiceURL := ""
-	if t.isTextEnglish(text) || t.coefontID == "native" {
-		voiceURL = fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
-	} else {
-		voiceURL = NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
-	}
-
+	voiceURL := t.fetchVoiceUrl(text, lang)
 	if voiceURL == "" {
 		return nil
 	}
@@ -178,7 +174,7 @@ func (t *TtsSession) SetLanguage(discord *discordgo.Session, langText string) er
 // SetCoefontID
 func (t *TtsSession) SetCoefontID(coefontID string) {
 	if coefontID == "default" {
-		t.coefontID = "5af5520c-e976-43fe-9fa5-ed37ffd781f3"
+		t.coefontID = DefaultcontentId
 		return
 	}
 
@@ -225,6 +221,14 @@ func (t *TtsSession) playAudioFile(filename string) error {
 			playbackPosition := stream.PlaybackPosition()
 			log.Printf("Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
 		}
+	}
+}
+
+func (t *TtsSession) fetchVoiceUrl(text, lang string) string {
+	if t.isTextEnglish(text) || t.coefontID == "native" {
+		return fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
+	} else {
+		return NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
 	}
 }
 

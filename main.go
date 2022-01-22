@@ -148,6 +148,10 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 			logger.PrintError(err)
 		}
 		return
+	case isCommandMessage(m.Content, "voice"):
+		coefontID := strings.Replace(m.Content, botName()+" voice ", "", 1)
+		ttsSession.SetCoefontID(coefontID)
+		return
 	}
 
 	if err = ttsSession.Speech(discord, m.Content); err != nil {

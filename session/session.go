@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
@@ -24,6 +25,7 @@ type TtsSession struct {
 	speechSpeed     float64
 	speechLanguage  string
 	guildID         string
+	coefontID       string
 }
 
 // NewTtsSession create new TtsSession
@@ -34,6 +36,7 @@ func NewTtsSession() *TtsSession {
 		mut:             sync.Mutex{},
 		speechSpeed:     1.5,
 		speechLanguage:  "auto",
+		coefontID:       "5af5520c-e976-43fe-9fa5-ed37ffd781f3",
 	}
 }
 
@@ -114,7 +117,17 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
-	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
+	voiceURL := ""
+	if t.isTextEnglish(text) || t.coefontID == "native" {
+		voiceURL = fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
+	} else {
+		voiceURL = NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
+	}
+
+	if voiceURL == "" {
+		return nil
+	}
+
 	if err := t.playAudioFile(voiceURL); err != nil {
 		t.SendMessage(discord, "err=%s", err.Error())
 		return fmt.Errorf("t.playAudioFile(voiceURL:%+v) fail: %w", voiceURL, err)
@@ -162,6 +175,16 @@ func (t *TtsSession) SetLanguage(discord *discordgo.Session, langText string) er
 	return nil
 }
 
+// SetCoefontID
+func (t *TtsSession) SetCoefontID(coefontID string) {
+	if coefontID == "default" {
+		t.coefontID = "5af5520c-e976-43fe-9fa5-ed37ffd781f3"
+		return
+	}
+
+	t.coefontID = coefontID
+}
+
 // playAudioFile play audio file on the voice channel
 func (t *TtsSession) playAudioFile(filename string) error {
 	if err := t.VoiceConnection.Speaking(true); err != nil {
@@ -194,6 +217,7 @@ func (t *TtsSession) playAudioFile(filename string) error {
 			if err != nil && err != io.EOF {
 				return err
 			}
+			os.Remove(filename)
 			encodeSession.Cleanup()
 			return nil
 		case <-ticker.C:
@@ -202,4 +226,19 @@ func (t *TtsSession) playAudioFile(filename string) error {
 			log.Printf("Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
 		}
 	}
+}
+
+func (t *TtsSession) isTextEnglish(text string) bool {
+	upperA := rune('A')
+	upperZ := rune('Z')
+	lowerA := rune('a')
+	lowerZ := rune('z')
+
+	for _, c := range text {
+		if !(c >= upperA && c <= upperZ) && !(c >= lowerA && c <= lowerZ) {
+			return false
+		}
+	}
+
+	return true
 }

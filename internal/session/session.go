@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -15,6 +14,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
+
+	"github.com/takanakahiko/discord-tts/internal/voice"
 )
 
 const DefaultcontentId = "86fe0015-860a-409e-a79e-ff2d5dd818fd"
@@ -226,9 +227,9 @@ func (t *TtsSession) playAudioFile(filename string) error {
 
 func (t *TtsSession) fetchVoiceUrl(text, lang string) string {
 	if t.isTextEnglish(text) || t.coefontID == "native" {
-		return fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
+		return voice.NewGoogleTranslateAdapter(lang).FetchVoiceUrl(text)
 	} else {
-		return NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
+		return voice.NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
 	}
 }
 

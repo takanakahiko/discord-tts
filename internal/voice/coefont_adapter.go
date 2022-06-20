@@ -1,4 +1,4 @@
-package session
+package voice
 
 import (
 	"bytes"
@@ -6,19 +6,22 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/google/uuid"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-type CoefontAdapter struct {
+var _ VoiceAdapter = &coefontAdapter{}
+
+type coefontAdapter struct {
 	CoefontID string
 }
 
-func NewCoefontAdapter(coefontID string) *CoefontAdapter {
-	return &CoefontAdapter{CoefontID: coefontID}
+func NewCoefontAdapter(coefontID string) VoiceAdapter {
+	return &coefontAdapter{CoefontID: coefontID}
 }
 
 type text2SpeechReq struct {
@@ -27,9 +30,9 @@ type text2SpeechReq struct {
 	Speed     float64 `json:"speed"`
 }
 
-func (a *CoefontAdapter) FetchVoiceUrl(text string) string {
+func (a *coefontAdapter) FetchVoiceUrl(text string) string {
 	accessKey := os.Getenv("COEFONT_ACCESS_TOKEN")
-	secret    := os.Getenv("COEFONT_SECRET")
+	secret := os.Getenv("COEFONT_SECRET")
 
 	j, err := json.Marshal(text2SpeechReq{
 		CoefontID: a.CoefontID,
@@ -40,7 +43,7 @@ func (a *CoefontAdapter) FetchVoiceUrl(text string) string {
 		return ""
 	}
 	t := strconv.FormatInt(time.Now().Unix(), 10)
-	sign := a.calcHMACSHA256(t+string(j), secret)
+	sign := calcHMACSHA256(t+string(j), secret)
 
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -72,6 +75,9 @@ func (a *CoefontAdapter) FetchVoiceUrl(text string) string {
 		return ""
 	}
 	u, err := uuid.NewRandom()
+	if err != nil {
+		return ""
+	}
 	uu := u.String()
 	path := uu + ".wav"
 	f, err := os.Create(path)
@@ -92,7 +98,7 @@ func (a *CoefontAdapter) FetchVoiceUrl(text string) string {
 	return currentDirectory + "/" + path
 }
 
-func (a *CoefontAdapter) calcHMACSHA256(message, secret string) string {
+func calcHMACSHA256(message, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write([]byte(message))
 	return hex.EncodeToString(mac.Sum(nil))

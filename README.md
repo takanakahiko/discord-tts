@@ -1,6 +1,7 @@
 # discord-tts
 
-text to speech bot for discord
+text to speech bot for discord.  
+(Support CoeFont voice.)
 
 ## require
 
@@ -11,6 +12,8 @@ text to speech bot for discord
 
 ```bash
 $ export TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+$ export COEFONT_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxx
+$ export COEFONT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
 $ go run main.go
 ```
 

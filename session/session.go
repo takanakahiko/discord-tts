@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
@@ -16,6 +17,8 @@ import (
 	"github.com/jonas747/dca"
 )
 
+const DefaultcontentId = "86fe0015-860a-409e-a79e-ff2d5dd818fd"
+
 // TtsSession is a data structure for managing bot agents that participate in one voice channel
 type TtsSession struct {
 	TextChanelID    string
@@ -24,6 +27,7 @@ type TtsSession struct {
 	speechSpeed     float64
 	speechLanguage  string
 	guildID         string
+	coefontID       string
 }
 
 // NewTtsSession create new TtsSession
@@ -34,6 +38,7 @@ func NewTtsSession() *TtsSession {
 		mut:             sync.Mutex{},
 		speechSpeed:     1.5,
 		speechLanguage:  "auto",
+		coefontID:       DefaultcontentId,
 	}
 }
 
@@ -114,7 +119,11 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
-	voiceURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
+	voiceURL := t.fetchVoiceUrl(text, lang)
+	if voiceURL == "" {
+		return nil
+	}
+
 	if err := t.playAudioFile(voiceURL); err != nil {
 		t.SendMessage(discord, "err=%s", err.Error())
 		return fmt.Errorf("t.playAudioFile(voiceURL:%+v) fail: %w", voiceURL, err)
@@ -162,6 +171,16 @@ func (t *TtsSession) SetLanguage(discord *discordgo.Session, langText string) er
 	return nil
 }
 
+// SetCoefontID
+func (t *TtsSession) SetCoefontID(coefontID string) {
+	if coefontID == "default" {
+		t.coefontID = DefaultcontentId
+		return
+	}
+
+	t.coefontID = coefontID
+}
+
 // playAudioFile play audio file on the voice channel
 func (t *TtsSession) playAudioFile(filename string) error {
 	if err := t.VoiceConnection.Speaking(true); err != nil {
@@ -194,6 +213,7 @@ func (t *TtsSession) playAudioFile(filename string) error {
 			if err != nil && err != io.EOF {
 				return err
 			}
+			os.Remove(filename)
 			encodeSession.Cleanup()
 			return nil
 		case <-ticker.C:
@@ -202,4 +222,27 @@ func (t *TtsSession) playAudioFile(filename string) error {
 			log.Printf("Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
 		}
 	}
+}
+
+func (t *TtsSession) fetchVoiceUrl(text, lang string) string {
+	if t.isTextEnglish(text) || t.coefontID == "native" {
+		return fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
+	} else {
+		return NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
+	}
+}
+
+func (t *TtsSession) isTextEnglish(text string) bool {
+	upperA := rune('A')
+	upperZ := rune('Z')
+	lowerA := rune('a')
+	lowerZ := rune('z')
+
+	for _, c := range text {
+		if !(c >= upperA && c <= upperZ) && !(c >= lowerA && c <= lowerZ) {
+			return false
+		}
+	}
+
+	return true
 }

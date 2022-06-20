@@ -5,16 +5,21 @@ text to speech bot for discord.
 
 ## require
 
-- goenv
 - ffmpeg
 
-## run
+## installation
+
+```bash
+$ go get -u github.com/takanakahiko/discord-tts
+```
+
+## usage
 
 ```bash
 $ export TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 $ export COEFONT_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxx
 $ export COEFONT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
-$ go run main.go
+$ discord-tts [--prefix=xxx]
 ```
 
 ## usage
@@ -29,13 +34,22 @@ In this sample, the bot says "test".
 ## custom prefix
 
 ```
-$ go run main.go --prefix=xxx
+$ discord-tts --prefix=xxx
 ```
 
 You can use it like this
 
 - `xxx join`
 - `xxx leave`
+
+## debug
+
+```bash
+$ export TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+$ export COEFONT_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxx
+$ export COEFONT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+$ go run cmd/discord-tts/discord-tts.go
+```
 
 ## contribution
 

@@ -10,7 +10,7 @@ text to speech bot for discord.
 ## installation
 
 ```bash
-$ go get -u github.com/takanakahiko/discord-tts
+$ go install github.com/takanakahiko/discord-tts/cmd/discord-tts@latest
 ```
 
 ## usage

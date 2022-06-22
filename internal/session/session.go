@@ -227,9 +227,11 @@ func (t *TtsSession) playAudioFile(filename string) error {
 
 func (t *TtsSession) fetchVoiceUrl(text, lang string) string {
 	if t.isTextEnglish(text) || t.coefontID == "native" {
-		return voice.NewGoogleTranslateAdapter(lang).FetchVoiceUrl(text)
+		// return voice.NewGoogleTranslateAdapter(lang).FetchVoiceUrl(text)
+		return voice.NewGoogleTtsAdapter("en-US").FetchVoiceUrl(text)
 	} else {
-		return voice.NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
+		// return voice.NewCoefontAdapter(t.coefontID).FetchVoiceUrl(text)
+		return voice.NewGoogleTtsAdapter("ja-JP").FetchVoiceUrl(text)
 	}
 }
 

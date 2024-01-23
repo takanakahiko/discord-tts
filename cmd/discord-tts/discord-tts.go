@@ -25,13 +25,12 @@ func main() {
 	flag.Parse()
 	fmt.Println("prefix       :", *prefix)
 
-	discord, err := discordgo.New()
+	discord, err := discordgo.New("Bot " + os.Getenv("TOKEN"))
 	if err != nil {
 		fmt.Println("Error logging in")
 		fmt.Println(err)
 	}
 
-	discord.Token = "Bot " + os.Getenv("TOKEN")
 	discord.AddHandler(onReady)
 	discord.AddHandler(onMessageCreate)
 	discord.AddHandler(onVoiceStateUpdate)
@@ -64,7 +63,7 @@ func onReady(discord *discordgo.Session, r *discordgo.Ready) {
 	clientID = discord.State.User.ID
 }
 
-//event by message
+// event by message
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	{
@@ -151,7 +150,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	case isCommandMessage(m.Content, "voice"):
 		coefontID := strings.Replace(m.Content, botName()+" voice ", "", 1)
 		ttsSession.SetCoefontID(coefontID)
-		ttsSession.SendMessage(discord, "声質を" + coefontID + "に変更しました")
+		ttsSession.SendMessage(discord, "声質を"+coefontID+"に変更しました")
 		return
 	}
 

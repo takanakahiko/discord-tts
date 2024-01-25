@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"github.com/takanakahiko/discord-tts/internal/session"
 )
 
+//nolint:gochecknoglobals
 var (
 	sessionManager = session.NewTtsSessionManager()
 	prefix         = flag.String("prefix", "", "call prefix")
@@ -59,13 +61,12 @@ func botName() string {
 	return *prefix
 }
 
-func onReady(discord *discordgo.Session, r *discordgo.Ready) {
+func onReady(discord *discordgo.Session, _ *discordgo.Ready) {
 	clientID = discord.State.User.ID
 }
 
-// event by message
+// event by message.
 func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
-
 	{
 		discordChannel, err := discord.Channel(m.ChannelID)
 		if err != nil {
@@ -73,7 +74,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 		guild, err := discord.Guild(m.GuildID)
-		if err != nil && err != session.ErrTtsSessionNotFound {
+		if err != nil && !errors.Is(err, session.ErrTtsSessionNotFound) {
 			log.Println(err)
 			return
 		}
@@ -87,10 +88,10 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// "join" command
 	if isCommandMessage(m.Content, "join") {
-		if _, err := sessionManager.GetByGuidID(m.GuildID); err == nil {
-			sendMessage(discord, m.ChannelID, "Bot is already in voice-chat.")
+		if _, err := sessionManager.GetByGuildID(m.GuildID); err == nil {
+			sendMessagef(discord, m.ChannelID, "Bot is already in voice-chat.")
 			return
-		} else if err != session.ErrTtsSessionNotFound {
+		} else if !errors.Is(err, session.ErrTtsSessionNotFound) {
 			log.Println(err)
 			return
 		}
@@ -106,8 +107,8 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// ignore case of "not join" or "include ignore prefix"
-	ttsSession, err := sessionManager.GetByGuidID(m.GuildID)
-	if err == session.ErrTtsSessionNotFound {
+	ttsSession, err := sessionManager.GetByGuildID(m.GuildID)
+	if errors.Is(err, session.ErrTtsSessionNotFound) {
 		return
 	}
 	if err != nil {
@@ -126,7 +127,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		if err := ttsSession.Leave(discord); err != nil {
 			logger.PrintError(err)
 		}
-		if err := sessionManager.Remove(ttsSession.GuidID()); err != nil {
+		if err := sessionManager.Remove(ttsSession.GuildID()); err != nil {
 			logger.PrintError(err)
 		}
 		return
@@ -134,7 +135,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 		speedStr := strings.Replace(m.Content, botName()+" speed ", "", 1)
 		newSpeed, err := strconv.ParseFloat(speedStr, 64)
 		if err != nil {
-			ttsSession.SendMessage(discord, "数字ではない値は設定できません")
+			ttsSession.SendMessagef(discord, "数字ではない値は設定できません")
 			return
 		}
 		if err = ttsSession.SetSpeechSpeed(discord, newSpeed); err != nil {
@@ -150,7 +151,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	case isCommandMessage(m.Content, "voice"):
 		coefontID := strings.Replace(m.Content, botName()+" voice ", "", 1)
 		ttsSession.SetCoefontID(coefontID)
-		ttsSession.SendMessage(discord, "声質を"+coefontID+"に変更しました")
+		ttsSession.SendMessagef(discord, "声質を"+coefontID+"に変更しました")
 		return
 	}
 
@@ -160,8 +161,8 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func onVoiceStateUpdate(discord *discordgo.Session, v *discordgo.VoiceStateUpdate) {
-	ttsSession, err := sessionManager.GetByGuidID(v.GuildID)
-	if err == session.ErrTtsSessionNotFound {
+	ttsSession, err := sessionManager.GetByGuildID(v.GuildID)
+	if errors.Is(err, session.ErrTtsSessionNotFound) {
 		return
 	}
 	if err != nil {
@@ -195,8 +196,8 @@ func isCommandMessage(message, command string) bool {
 	return strings.HasPrefix(message, botName()+" "+command)
 }
 
-func sendMessage(discord *discordgo.Session, textChanelID, format string, v ...interface{}) {
+func sendMessagef(discord *discordgo.Session, textChanelID, format string, v ...interface{}) {
 	session := session.NewTtsSession()
 	session.TextChanelID = textChanelID
-	session.SendMessage(discord, format, v...)
+	session.SendMessagef(discord, format, v...)
 }

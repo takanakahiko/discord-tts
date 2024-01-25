@@ -1,52 +1,50 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 )
 
-var (
-	ErrTtsSessionNotFound = fmt.Errorf("ttsSession not found")
-)
+var ErrTtsSessionNotFound = fmt.Errorf("ttsSession not found")
 
 type TtsSessionManager struct {
 	sessions []*TtsSession
 }
 
-// NewTtsSession create new TtsSessionManager
+// NewTtsSession create new TtsSessionManager.
 func NewTtsSessionManager() *TtsSessionManager {
 	return &TtsSessionManager{
 		sessions: []*TtsSession{},
 	}
 }
 
-// GetByGuidID
-func (t *TtsSessionManager) GetByGuidID(guidID string) (*TtsSession, error) {
+// GetByGuildID.
+func (t *TtsSessionManager) GetByGuildID(guildID string) (*TtsSession, error) {
 	for _, s := range t.sessions {
-		if s.GuidID() == guidID {
+		if s.GuildID() == guildID {
 			return s, nil
 		}
 	}
 	return nil, ErrTtsSessionNotFound
 }
 
-// Add
+// Add.
 func (t *TtsSessionManager) Add(ttsSession *TtsSession) error {
-	_, err := t.GetByGuidID(ttsSession.GuidID())
-	if err != ErrTtsSessionNotFound {
-		return fmt.Errorf("ttsSession is already in voice-chat")
+	_, err := t.GetByGuildID(ttsSession.GuildID())
+	if !errors.Is(err, ErrTtsSessionNotFound) {
+		return errors.New("ttsSession is already in voice-chat")
 	}
 	t.sessions = append(t.sessions, ttsSession)
 	return nil
 }
 
-// Remove
-func (t *TtsSessionManager) Remove(guidID string) error {
-	var ret []*TtsSession
+// Remove.
+func (t *TtsSessionManager) Remove(guildID string) error {
+	ret := make([]*TtsSession, 0, len(t.sessions)-1)
 	for _, v := range t.sessions {
-		if v.GuidID() == guidID {
-			continue
+		if v.GuildID() != guildID {
+			ret = append(ret, v)
 		}
-		ret = append(ret, v)
 	}
 	t.sessions = ret
 	return nil

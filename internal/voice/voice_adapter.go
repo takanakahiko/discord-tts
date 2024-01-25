@@ -1,5 +1,5 @@
 package voice
 
-type VoiceAdapter interface {
-	FetchVoiceUrl(text string) string
+type Adapter interface {
+	FetchVoiceURL(text string) string
 }

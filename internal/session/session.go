@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,17 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/text/language"
-
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
-
 	"github.com/takanakahiko/discord-tts/internal/voice"
+	"golang.org/x/text/language"
 )
 
-const DefaultcontentId = "86fe0015-860a-409e-a79e-ff2d5dd818fd"
+const DefaultcontentID = "86fe0015-860a-409e-a79e-ff2d5dd818fd"
 
-// TtsSession is a data structure for managing bot agents that participate in one voice channel
+// TtsSession is a data structure for managing bot agents that participate in one voice channel.
 type TtsSession struct {
 	TextChanelID    string
 	VoiceConnection *discordgo.VoiceConnection
@@ -31,7 +30,7 @@ type TtsSession struct {
 	coefontID       string
 }
 
-// NewTtsSession create new TtsSession
+// NewTtsSession create new TtsSession.
 func NewTtsSession() *TtsSession {
 	return &TtsSession{
 		TextChanelID:    "",
@@ -39,27 +38,27 @@ func NewTtsSession() *TtsSession {
 		mut:             sync.Mutex{},
 		speechSpeed:     1.5,
 		speechLanguage:  "auto",
-		coefontID:       DefaultcontentId,
+		coefontID:       DefaultcontentID,
 	}
 }
 
-// GetByGuidID
-func (t *TtsSession) GuidID() string {
+// GetByGuildID.
+func (t *TtsSession) GuildID() string {
 	return t.guildID
 }
 
-// Get state of VoiceConnection
+// Get state of VoiceConnection.
 func (t *TtsSession) IsConnected() bool {
 	return t.VoiceConnection != nil && t.VoiceConnection.Ready
 }
 
-// Join join the same channel as the caller
+// Join join the same channel as the caller.
 func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelID string) error {
 	if t.VoiceConnection != nil {
-		return fmt.Errorf("bot is already in voice-chat")
+		return errors.New("bot is already in voice-chat")
 	}
 
-	var callUserVoiceState *discordgo.VoiceState = nil
+	var callUserVoiceState *discordgo.VoiceState
 	for _, guild := range discord.State.Guilds {
 		for _, vs := range guild.VoiceStates {
 			if vs.UserID == callerUserID {
@@ -68,14 +67,14 @@ func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelI
 		}
 	}
 	if callUserVoiceState == nil {
-		t.SendMessage(discord, "Caller is not in voice-chat.")
-		return fmt.Errorf("caller is not in voice-chat")
+		t.SendMessagef(discord, "Caller is not in voice-chat.")
+		return errors.New("caller is not in voice-chat")
 	}
 
 	voiceConnection, err := discord.ChannelVoiceJoin(
 		callUserVoiceState.GuildID, callUserVoiceState.ChannelID, false, true)
 	if err != nil {
-		t.SendMessage(discord, err.Error())
+		t.SendMessagef(discord, err.Error())
 		return fmt.Errorf(
 			"failed ChannelVoiceJoin(gID=%s, cID=%s, mute=false, deaf=true): %w",
 			callUserVoiceState.GuildID, callUserVoiceState.ChannelID, err)
@@ -83,12 +82,12 @@ func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelI
 	t.VoiceConnection = voiceConnection
 	t.TextChanelID = textChannelID
 	t.guildID = voiceConnection.GuildID
-	t.SendMessage(discord, "Joined to voice chat!\n speechSpeed:%g\n speechLanguage:%s", t.speechSpeed, t.speechLanguage)
+	t.SendMessagef(discord, "Joined to voice chat!\n speechSpeed:%g\n speechLanguage:%s", t.speechSpeed, t.speechLanguage)
 	return nil
 }
 
-// SendMessage send text to text chat
-func (t *TtsSession) SendMessage(discord *discordgo.Session, format string, v ...interface{}) {
+// sendMessagef send text to text chat.
+func (t *TtsSession) SendMessagef(discord *discordgo.Session, format string, v ...interface{}) {
 	if t.TextChanelID == "" {
 		log.Println("Error sending message: TextChanelID is not set")
 	}
@@ -99,11 +98,11 @@ func (t *TtsSession) SendMessage(discord *discordgo.Session, format string, v ..
 	}
 }
 
-// Speech speech the received text on the voice channel
+// Speech speech the received text on the voice channel.
 func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	if regexp.MustCompile(`<a:|<@|<#|<@&|http|` + "```").MatchString(text) {
-		t.SendMessage(discord, "Skipped reading")
-		return fmt.Errorf("text is emoji, mention channel, group mention or url")
+		t.SendMessagef(discord, "Skipped reading")
+		return errors.New("text is emoji, mention channel, group mention or url")
 	}
 
 	text = regexp.MustCompile(`<:(.+?):[0-9]+>`).ReplaceAllString(text, "$1")
@@ -120,69 +119,69 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
-	voiceURL := t.fetchVoiceUrl(text, lang)
+	voiceURL := t.FetchVoiceURL(text, lang)
 	if voiceURL == "" {
 		return nil
 	}
 
 	if err := t.playAudioFile(voiceURL); err != nil {
-		t.SendMessage(discord, "err=%s", err.Error())
+		t.SendMessagef(discord, "err=%s", err.Error())
 		return fmt.Errorf("t.playAudioFile(voiceURL:%+v) fail: %w", voiceURL, err)
 	}
 	return nil
 }
 
-// Leave end connection and init variables
+// Leave end connection and init variables.
 func (t *TtsSession) Leave(discord *discordgo.Session) error {
 	if err := t.VoiceConnection.Disconnect(); err != nil {
 		return fmt.Errorf("t.VoiceConnection.Disconnect() fail: %w", err)
 	}
-	t.SendMessage(discord, "Left from voice chat...")
+	t.SendMessagef(discord, "Left from voice chat...")
 	t.VoiceConnection = nil
 	t.TextChanelID = ""
 	return nil
 }
 
-// SetSpeechSpeed validate and set speechSpeed
+// SetSpeechSpeed validate and set speechSpeed.
 func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed float64) error {
 	if newSpeechSpeed < 0.5 || newSpeechSpeed > 100 {
-		t.SendMessage(discord, "You can set a value from 0.5 to 100")
+		t.SendMessagef(discord, "You can set a value from 0.5 to 100")
 		return fmt.Errorf("newSpeechSpeed=%v is invalid", newSpeechSpeed)
 	}
 	t.speechSpeed = newSpeechSpeed
-	t.SendMessage(discord, "Changed speed to %s", strconv.FormatFloat(newSpeechSpeed, 'f', -1, 64))
+	t.SendMessagef(discord, "Changed speed to %s", strconv.FormatFloat(newSpeechSpeed, 'f', -1, 64))
 	return nil
 }
 
-// SetLanguage
+// SetLanguage.
 func (t *TtsSession) SetLanguage(discord *discordgo.Session, langText string) error {
 	if langText == "auto" {
 		t.speechLanguage = langText
-		t.SendMessage(discord, "Changed language to '%s'", t.speechLanguage)
+		t.SendMessagef(discord, "Changed language to '%s'", t.speechLanguage)
 		return nil
 	}
 
-	if lang, err := language.Parse(langText); err != nil {
+	lang, err := language.Parse(langText)
+	if err != nil {
 		return fmt.Errorf("Language.Parse() fail: %w", err)
-	} else {
-		t.speechLanguage = lang.String()
 	}
+	t.speechLanguage = lang.String()
 
-	t.SendMessage(discord, "Changed language to '%s'", t.speechLanguage)
+	t.SendMessagef(discord, "Changed language to '%s'", t.speechLanguage)
 	return nil
 }
 
-// SetCoefontID
+// SetCoefontID.
 func (t *TtsSession) SetCoefontID(coefontID string) {
 	if coefontID == "default" {
-		t.coefontID = DefaultcontentId
+		t.coefontID = DefaultcontentID
 		return
 	}
 
 	t.coefontID = coefontID
 }
 
-// playAudioFile play audio file on the voice channel
+// playAudioFile play audio file on the voice channel.
 func (t *TtsSession) playAudioFile(filename string) error {
 	if err := t.VoiceConnection.Speaking(true); err != nil {
 		return fmt.Errorf("t.VoiceConnection.Speaking(true) fail: %w", err)
@@ -211,7 +210,7 @@ func (t *TtsSession) playAudioFile(filename string) error {
 	for {
 		select {
 		case err := <-done:
-			if err != nil && err != io.EOF {
+			if err != nil && !errors.Is(err, io.EOF) {
 				return err
 			}
 			os.Remove(filename)
@@ -225,6 +224,6 @@ func (t *TtsSession) playAudioFile(filename string) error {
 	}
 }
 
-func (t *TtsSession) fetchVoiceUrl(text, lang string) string {
-	return voice.NewGoogleTranslateAdapter(lang).FetchVoiceUrl(text)
+func (t *TtsSession) FetchVoiceURL(text, lang string) string {
+	return voice.NewGoogleTranslateAdapter(lang).FetchVoiceURL(text)
 }

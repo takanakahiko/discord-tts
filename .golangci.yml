@@ -1,0 +1,18 @@
+linters:
+  enable-all: true
+  disable:
+  - varnamelen
+  - nlreturn
+  - ireturn
+  - gosmopolitan
+  - gomnd
+  - goerr113
+  - exhaustivestruct
+  - depguard
+  - wsl
+  - exhaustruct
+  - lll
+  - golint
+  - funlen
+  - forbidigo
+  - cyclop

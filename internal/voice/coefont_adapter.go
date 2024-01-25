@@ -2,6 +2,7 @@ package voice
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,13 +15,13 @@ import (
 	"github.com/google/uuid"
 )
 
-var _ VoiceAdapter = &coefontAdapter{}
+var _ Adapter = &coefontAdapter{}
 
 type coefontAdapter struct {
 	CoefontID string
 }
 
-func NewCoefontAdapter(coefontID string) VoiceAdapter {
+func NewCoefontAdapter(coefontID string) Adapter {
 	return &coefontAdapter{CoefontID: coefontID}
 }
 
@@ -30,7 +31,9 @@ type text2SpeechReq struct {
 	Speed     float64 `json:"speed"`
 }
 
-func (a *coefontAdapter) FetchVoiceUrl(text string) string {
+func (a *coefontAdapter) FetchVoiceURL(text string) string {
+	ctx := context.Background()
+
 	accessKey := os.Getenv("COEFONT_ACCESS_TOKEN")
 	secret := os.Getenv("COEFONT_SECRET")
 
@@ -51,7 +54,7 @@ func (a *coefontAdapter) FetchVoiceUrl(text string) string {
 		},
 	}
 
-	req, err := http.NewRequest("POST", "https://api.coefont.cloud/v1/text2speech", bytes.NewBuffer(j))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.coefont.cloud/v1/text2speech", bytes.NewBuffer(j))
 	if err != nil {
 		return ""
 	}
@@ -70,10 +73,11 @@ func (a *coefontAdapter) FetchVoiceUrl(text string) string {
 		return ""
 	}
 
-	resp, err = http.Get(resp.Header.Get("Location"))
+	resp2, err := http.NewRequestWithContext(ctx, http.MethodGet, resp.Header.Get("Location"), nil)
 	if err != nil {
 		return ""
 	}
+	defer resp2.Body.Close()
 	u, err := uuid.NewRandom()
 	if err != nil {
 		return ""

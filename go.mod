@@ -11,7 +11,6 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jonas747/dca v0.0.0-20201113050843-65838623978b
 	golang.org/x/text v0.14.0
-	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 )
 
 require (
@@ -33,6 +32,7 @@ require (
 	golang.org/x/sys v0.16.0 // indirect
 	google.golang.org/api v0.114.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/grpc v1.56.3 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )

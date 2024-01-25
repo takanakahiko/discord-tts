@@ -16,3 +16,4 @@ linters:
   - funlen
   - forbidigo
   - cyclop
+  - gomoddirectives

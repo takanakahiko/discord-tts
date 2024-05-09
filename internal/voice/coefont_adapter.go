@@ -37,7 +37,7 @@ func (a *coefontAdapter) FetchVoiceURL(text string) string {
 	accessKey := os.Getenv("COEFONT_ACCESS_TOKEN")
 	secret := os.Getenv("COEFONT_SECRET")
 
-	j, err := json.Marshal(text2SpeechReq{
+	bytejson, err := json.Marshal(text2SpeechReq{
 		CoefontID: a.CoefontID,
 		Text:      text,
 		Speed:     0.7,
@@ -45,8 +45,8 @@ func (a *coefontAdapter) FetchVoiceURL(text string) string {
 	if err != nil {
 		return ""
 	}
-	t := strconv.FormatInt(time.Now().Unix(), 10)
-	sign := calcHMACSHA256(t+string(j), secret)
+	stringtime := strconv.FormatInt(time.Now().Unix(), 10)
+	sign := calcHMACSHA256(stringtime+string(bytejson), secret)
 
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -54,13 +54,13 @@ func (a *coefontAdapter) FetchVoiceURL(text string) string {
 		},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.coefont.cloud/v1/text2speech", bytes.NewBuffer(j))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.coefont.cloud/v1/text2speech", bytes.NewBuffer(bytejson))
 	if err != nil {
 		return ""
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Coefont-Content", sign)
-	req.Header.Set("X-Coefont-Date", t)
+	req.Header.Set("X-Coefont-Date", stringtime)
 	req.Header.Set("Authorization", accessKey)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -84,16 +84,16 @@ func (a *coefontAdapter) FetchVoiceURL(text string) string {
 	}
 	uu := u.String()
 	path := uu + ".wav"
-	f, err := os.Create(path)
+	audiofile, err := os.Create(path)
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer audiofile.Close()
 	_, err = buf.ReadFrom(resp.Body)
 	if err != nil {
 		return ""
 	}
-	_, err = f.Write(buf.Bytes())
+	_, err = audiofile.Write(buf.Bytes())
 	if err != nil {
 		return ""
 	}

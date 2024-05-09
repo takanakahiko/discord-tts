@@ -16,7 +16,7 @@ type googleTtsAdapter struct {
 	LanguageCode string
 }
 
-func NewGoogleTtsAdapter(languageCode string) Adapter {
+func NewGoogleTtsAdapter(languageCode string) *googleTtsAdapter {
 	return &googleTtsAdapter{
 		LanguageCode: languageCode,
 	}

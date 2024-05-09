@@ -13,7 +13,7 @@ type googleTranslateAdapter struct {
 	Lang string
 }
 
-func NewGoogleTranslateAdapter(lang string) Adapter {
+func NewGoogleTranslateAdapter(lang string) *googleTranslateAdapter {
 	return &googleTranslateAdapter{Lang: lang}
 }
 

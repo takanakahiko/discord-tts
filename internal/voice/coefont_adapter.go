@@ -21,7 +21,7 @@ type coefontAdapter struct {
 	CoefontID string
 }
 
-func NewCoefontAdapter(coefontID string) Adapter {
+func NewCoefontAdapter(coefontID string) *coefontAdapter {
 	return &coefontAdapter{CoefontID: coefontID}
 }
 

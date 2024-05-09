@@ -2,10 +2,9 @@ package session
 
 import (
 	"errors"
-	"fmt"
 )
 
-var ErrTtsSessionNotFound = fmt.Errorf("ttsSession not found")
+var ErrTtsSessionNotFound = errors.New("ttsSession not found")
 
 type TtsSessionManager struct {
 	sessions []*TtsSession

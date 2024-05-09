@@ -2,9 +2,13 @@ package session
 
 import (
 	"errors"
+	"fmt"
 )
 
-var ErrTtsSessionNotFound = errors.New("ttsSession not found")
+var (
+	errTtsSessionManager  = errors.New("TtsSessionManager error")
+	ErrTtsSessionNotFound = errors.New("ttsSession not found")
+)
 
 type TtsSessionManager struct {
 	sessions []*TtsSession
@@ -31,7 +35,7 @@ func (t *TtsSessionManager) GetByGuildID(guildID string) (*TtsSession, error) {
 func (t *TtsSessionManager) Add(ttsSession *TtsSession) error {
 	_, err := t.GetByGuildID(ttsSession.GuildID())
 	if !errors.Is(err, ErrTtsSessionNotFound) {
-		return errors.New("ttsSession is already in voice-chat")
+		return fmt.Errorf("ttsSession is already in voice-chat: %w", errTtsSessionManager)
 	}
 	t.sessions = append(t.sessions, ttsSession)
 	return nil

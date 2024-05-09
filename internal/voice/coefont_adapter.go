@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var _ Adapter = &coefontAdapter{}
+var _ Adapter = (*coefontAdapter)(nil)
 
 type coefontAdapter struct {
 	CoefontID string
@@ -49,9 +49,14 @@ func (a *coefontAdapter) FetchVoiceURL(text string) string {
 	sign := calcHMACSHA256(stringtime+string(bytejson), secret)
 
 	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
+
+		// 以下デフォルト値
+		Transport: nil,
+		Jar:       nil,
+		Timeout:   0,
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,

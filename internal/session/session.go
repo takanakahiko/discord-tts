@@ -38,6 +38,7 @@ func NewTtsSession() *TtsSession {
 		mut:             sync.Mutex{},
 		speechSpeed:     1.5,
 		speechLanguage:  "auto",
+		guildID:         "",
 		coefontID:       DefaultcontentID,
 	}
 }

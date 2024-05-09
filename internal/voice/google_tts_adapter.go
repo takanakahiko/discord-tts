@@ -9,7 +9,7 @@ import (
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 )
 
-var _ Adapter = &googleTtsAdapter{}
+var _ Adapter = (*googleTtsAdapter)(nil)
 
 // googleTtsAdapter.
 type googleTtsAdapter struct {
@@ -38,6 +38,13 @@ func (a *googleTtsAdapter) FetchVoiceURL(text string) string {
 		Voice: nil,
 		AudioConfig: &texttospeechpb.AudioConfig{
 			AudioEncoding: texttospeechpb.AudioEncoding_MP3, //nolint:nosnakecase
+
+			// 以下デフォルト値
+			SpeakingRate:     0,
+			Pitch:            0,
+			VolumeGainDb:     0,
+			SampleRateHertz:  0,
+			EffectsProfileId: nil,
 		},
 	}
 
@@ -47,12 +54,14 @@ func (a *googleTtsAdapter) FetchVoiceURL(text string) string {
 			LanguageCode: a.LanguageCode,
 			SsmlGender:   texttospeechpb.SsmlVoiceGender_FEMALE, //nolint:nosnakecase
 			Name:         "ja-JP-Wavenet-B",
+			CustomVoice:  nil,
 		}
 	case "en-US":
 		req.Voice = &texttospeechpb.VoiceSelectionParams{
 			LanguageCode: a.LanguageCode,
 			SsmlGender:   texttospeechpb.SsmlVoiceGender_FEMALE, //nolint:nosnakecase
 			Name:         "en-US-Wavenet-C",
+			CustomVoice:  nil,
 		}
 	}
 

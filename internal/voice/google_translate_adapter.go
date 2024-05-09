@@ -5,7 +5,7 @@ import (
 	"net/url"
 )
 
-var _ Adapter = &googleTranslateAdapter{}
+var _ Adapter = (*googleTranslateAdapter)(nil)
 
 // googleTranslateAdapter
 // 仮の実装として使っているが本来は利用しないほうがいい。

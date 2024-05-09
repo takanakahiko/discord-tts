@@ -23,3 +23,5 @@ linters-settings:
   gomoddirectives:
     replace-allow-list:
       - github.com/jonas747/dca # 該当パッケージが壊れているので独自にパッチを当てたものを利用したいため
+  cyclop:
+    max-complexity: 24 # デフォルトの10だと余計な関数の分割が発生するため

@@ -54,7 +54,8 @@ func (a *coefontAdapter) FetchVoiceURL(text string) string {
 		},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.coefont.cloud/v1/text2speech", bytes.NewBuffer(bytejson))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://api.coefont.cloud/v1/text2speech", bytes.NewBuffer(bytejson))
 	if err != nil {
 		return ""
 	}

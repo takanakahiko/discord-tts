@@ -219,7 +219,9 @@ func (t *TtsSession) playAudioFile(filename string) error {
 		case <-ticker.C:
 			stats := encodeSession.Stats()
 			playbackPosition := stream.PlaybackPosition()
-			log.Printf("Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
+			log.Printf(
+				"Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r",
+				playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
 		}
 	}
 }

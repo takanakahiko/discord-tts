@@ -18,5 +18,7 @@ func NewGoogleTranslateAdapter(lang string) *googleTranslateAdapter {
 }
 
 func (a *googleTranslateAdapter) FetchVoiceURL(text string) string {
-	return fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), a.Lang)
+	return fmt.Sprintf(
+		"http://translate.google.com/translate_tts?ie=UTF-8&textlen=32&client=tw-ob&q=%s&tl=%s",
+		url.QueryEscape(text), a.Lang)
 }

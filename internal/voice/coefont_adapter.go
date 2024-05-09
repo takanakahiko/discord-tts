@@ -40,7 +40,7 @@ func (a *coefontAdapter) FetchVoiceURL(text string) string {
 	bytejson, err := json.Marshal(text2SpeechReq{
 		CoefontID: a.CoefontID,
 		Text:      text,
-		Speed:     0.7,
+		Speed:     0.7, //nolint:mnd // 直接指定した方がコードの可読性が高いため
 	})
 	if err != nil {
 		return ""

@@ -75,7 +75,7 @@ func (a *googleTtsAdapter) FetchVoiceURL(text string) string {
 		log.Panic(err)
 	}
 	defer tmpfile.Close()
-	err = os.WriteFile(tmpfile.Name(), resp.GetAudioContent(), 0600) //nolint:gofumpt
+	err = os.WriteFile(tmpfile.Name(), resp.GetAudioContent(), 0600) //nolint:gofumpt,mnd // fs.FileModeは直接指定した方がわかりやすいため
 
 	if err != nil {
 		log.Panic(err)

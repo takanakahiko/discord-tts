@@ -38,7 +38,7 @@ func NewTtsSession() *TtsSession {
 		TextChanelID:    "",
 		VoiceConnection: nil,
 		mut:             sync.Mutex{},
-		speechSpeed:     1.5,
+		speechSpeed:     1.5, //nolint:mnd // 直接指定した方がコードの可読性が高いため
 		speechLanguage:  "auto",
 		guildID:         "",
 		coefontID:       DefaultcontentID,

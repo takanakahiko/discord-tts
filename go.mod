@@ -1,6 +1,8 @@
 module github.com/takanakahiko/discord-tts
 
-go 1.18
+go 1.22
+
+toolchain go1.22.3
 
 // patch: https://github.com/takanakahiko-fork/dca/commit/7f9f6fb86b20cc6a4af1c95e4c442fba8e4f274d
 replace github.com/jonas747/dca v0.0.0-20201113050843-65838623978b => github.com/takanakahiko-fork/dca v0.0.0-20240125163404-7f9f6fb86b20

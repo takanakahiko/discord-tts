@@ -19,6 +19,8 @@ import (
 
 const DefaultcontentID = "86fe0015-860a-409e-a79e-ff2d5dd818fd"
 
+var errTtsSession = errors.New("TtsSession error")
+
 // TtsSession is a data structure for managing bot agents that participate in one voice channel.
 type TtsSession struct {
 	TextChanelID    string
@@ -36,8 +38,9 @@ func NewTtsSession() *TtsSession {
 		TextChanelID:    "",
 		VoiceConnection: nil,
 		mut:             sync.Mutex{},
-		speechSpeed:     1.5,
+		speechSpeed:     1.5, //nolint:mnd // 直接指定した方がコードの可読性が高いため
 		speechLanguage:  "auto",
+		guildID:         "",
 		coefontID:       DefaultcontentID,
 	}
 }
@@ -55,7 +58,7 @@ func (t *TtsSession) IsConnected() bool {
 // Join join the same channel as the caller.
 func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelID string) error {
 	if t.VoiceConnection != nil {
-		return errors.New("bot is already in voice-chat")
+		return fmt.Errorf("bot is already in voice-chat: %w", errTtsSession)
 	}
 
 	var callUserVoiceState *discordgo.VoiceState
@@ -68,7 +71,7 @@ func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelI
 	}
 	if callUserVoiceState == nil {
 		t.SendMessagef(discord, "Caller is not in voice-chat.")
-		return errors.New("caller is not in voice-chat")
+		return fmt.Errorf("caller is not in voice-chat: %w", errTtsSession)
 	}
 
 	voiceConnection, err := discord.ChannelVoiceJoin(
@@ -102,7 +105,7 @@ func (t *TtsSession) SendMessagef(discord *discordgo.Session, format string, v .
 func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	if regexp.MustCompile(`<a:|<@|<#|<@&|http|` + "```").MatchString(text) {
 		t.SendMessagef(discord, "Skipped reading")
-		return errors.New("text is emoji, mention channel, group mention or url")
+		return fmt.Errorf("text is emoji, mention channel, group mention or url: %w", errTtsSession)
 	}
 
 	text = regexp.MustCompile(`<:(.+?):[0-9]+>`).ReplaceAllString(text, "$1")
@@ -146,7 +149,7 @@ func (t *TtsSession) Leave(discord *discordgo.Session) error {
 func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed float64) error {
 	if newSpeechSpeed < 0.5 || newSpeechSpeed > 100 {
 		t.SendMessagef(discord, "You can set a value from 0.5 to 100")
-		return fmt.Errorf("newSpeechSpeed=%v is invalid", newSpeechSpeed)
+		return fmt.Errorf("newSpeechSpeed=%v is invalid: %w", newSpeechSpeed, errTtsSession)
 	}
 	t.speechSpeed = newSpeechSpeed
 	t.SendMessagef(discord, "Changed speed to %s", strconv.FormatFloat(newSpeechSpeed, 'f', -1, 64))
@@ -219,7 +222,9 @@ func (t *TtsSession) playAudioFile(filename string) error {
 		case <-ticker.C:
 			stats := encodeSession.Stats()
 			playbackPosition := stream.PlaybackPosition()
-			log.Printf("Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
+			log.Printf(
+				"Sending Now... : Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r",
+				playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
 		}
 	}
 }

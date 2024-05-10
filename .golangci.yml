@@ -1,19 +1,27 @@
 linters:
   enable-all: true
   disable:
-  - varnamelen
-  - nlreturn
-  - ireturn
-  - gosmopolitan
-  - gomnd
-  - goerr113
-  - exhaustivestruct
-  - depguard
-  - wsl
-  - exhaustruct
-  - lll
-  - golint
-  - funlen
-  - forbidigo
-  - cyclop
-  - gomoddirectives
+  - wsl # 余計な改行をなるべく含まないようにすることで得られる見通しの良さを重視するため
+  - nlreturn # 上記と同様
+  - gosmopolitan # 現在はi18n/l10nを検討していないため
+  - depguard # 規模的に依存関係の流れを厳格に管理する必要性はないあめ
+  - forbidigo # いまのところ特に禁止したい表現はないため
+  - gomnd # The linter 'gomnd' is deprecated
+  - execinquery # The linter 'execinquery' is deprecated
+linters-settings:
+  varnamelen:
+    ignore-decls:
+    - v *discordgo.VoiceStateUpdate # パッケージの使用例がその命名であるため
+    - m *discordgo.MessageCreate # パッケージの使用例がその命名であるため
+  revive:
+    rules:
+    - name: unexported-return
+      disabled: true # ireturnへの対応を優先するため
+  funlen:
+    lines: 100 # デフォルトの60だと余計な関数の分割が発生するため
+    statements: 60 # デフォルトの40だと余計な関数の分割が発生するため
+  gomoddirectives:
+    replace-allow-list:
+      - github.com/jonas747/dca # 該当パッケージが壊れているので独自にパッチを当てたものを利用したいため
+  cyclop:
+    max-complexity: 24 # デフォルトの10だと余計な関数の分割が発生するため

@@ -19,6 +19,9 @@ import (
 
 const DefaultcontentID = "86fe0015-860a-409e-a79e-ff2d5dd818fd"
 
+// autoLanguage is the speech language that switches between ja and en by the text.
+const autoLanguage = "auto"
+
 var errTtsSession = errors.New("TtsSession error")
 
 // TtsSession is a data structure for managing bot agents that participate in one voice channel.
@@ -39,18 +42,18 @@ func NewTtsSession() *TtsSession {
 		VoiceConnection: nil,
 		mut:             sync.Mutex{},
 		speechSpeed:     1.5, //nolint:mnd // 直接指定した方がコードの可読性が高いため
-		speechLanguage:  "auto",
+		speechLanguage:  autoLanguage,
 		guildID:         "",
 		coefontID:       DefaultcontentID,
 	}
 }
 
-// GetByGuildID.
+// GuildID returns the guild ID of the joined voice channel.
 func (t *TtsSession) GuildID() string {
 	return t.guildID
 }
 
-// Get state of VoiceConnection.
+// IsConnected returns the state of VoiceConnection.
 func (t *TtsSession) IsConnected() bool {
 	return t.VoiceConnection != nil && t.VoiceConnection.Ready
 }
@@ -77,7 +80,7 @@ func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelI
 	voiceConnection, err := discord.ChannelVoiceJoin(
 		callUserVoiceState.GuildID, callUserVoiceState.ChannelID, false, true)
 	if err != nil {
-		t.SendMessagef(discord, err.Error())
+		t.SendMessagef(discord, "%s", err.Error())
 		return fmt.Errorf(
 			"failed ChannelVoiceJoin(gID=%s, cID=%s, mute=false, deaf=true): %w",
 			callUserVoiceState.GuildID, callUserVoiceState.ChannelID, err)
@@ -89,8 +92,8 @@ func (t *TtsSession) Join(discord *discordgo.Session, callerUserID, textChannelI
 	return nil
 }
 
-// sendMessagef send text to text chat.
-func (t *TtsSession) SendMessagef(discord *discordgo.Session, format string, v ...interface{}) {
+// SendMessagef send text to text chat.
+func (t *TtsSession) SendMessagef(discord *discordgo.Session, format string, v ...any) {
 	if t.TextChanelID == "" {
 		log.Println("Error sending message: TextChanelID is not set")
 	}
@@ -112,7 +115,7 @@ func (t *TtsSession) Speech(discord *discordgo.Session, text string) error {
 	text = regexp.MustCompile(`_`).ReplaceAllString(text, "")
 
 	lang := t.speechLanguage
-	if lang == "auto" {
+	if lang == autoLanguage {
 		lang = "ja"
 		if regexp.MustCompile(`^[a-zA-Z0-9\s.,]+$`).MatchString(text) {
 			lang = "en"
@@ -158,7 +161,7 @@ func (t *TtsSession) SetSpeechSpeed(discord *discordgo.Session, newSpeechSpeed f
 
 // SetLanguage.
 func (t *TtsSession) SetLanguage(discord *discordgo.Session, langText string) error {
-	if langText == "auto" {
+	if langText == autoLanguage {
 		t.speechLanguage = langText
 		t.SendMessagef(discord, "Changed language to '%s'", t.speechLanguage)
 		return nil
@@ -182,6 +185,11 @@ func (t *TtsSession) SetCoefontID(coefontID string) {
 	}
 
 	t.coefontID = coefontID
+}
+
+// FetchVoiceURL returns the URL of the speech audio for the text.
+func (t *TtsSession) FetchVoiceURL(text, lang string) string {
+	return voice.NewGoogleTranslateAdapter(lang).FetchVoiceURL(text)
 }
 
 // playAudioFile play audio file on the voice channel.
@@ -227,8 +235,4 @@ func (t *TtsSession) playAudioFile(filename string) error {
 				playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
 		}
 	}
-}
-
-func (t *TtsSession) FetchVoiceURL(text, lang string) string {
-	return voice.NewGoogleTranslateAdapter(lang).FetchVoiceURL(text)
 }

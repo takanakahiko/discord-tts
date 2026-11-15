@@ -33,11 +33,13 @@ func (a *googleTtsAdapter) FetchVoiceURL(text string) string {
 
 	req := texttospeechpb.SynthesizeSpeechRequest{
 		Input: &texttospeechpb.SynthesisInput{
-			InputSource: &texttospeechpb.SynthesisInput_Text{Text: text}, //nolint:nosnakecase
+			InputSource:          &texttospeechpb.SynthesisInput_Text{Text: text},
+			Prompt:               nil,
+			CustomPronunciations: nil,
 		},
 		Voice: nil,
 		AudioConfig: &texttospeechpb.AudioConfig{
-			AudioEncoding: texttospeechpb.AudioEncoding_MP3, //nolint:nosnakecase
+			AudioEncoding: texttospeechpb.AudioEncoding_MP3,
 
 			// 以下デフォルト値
 			SpeakingRate:     0,
@@ -46,22 +48,29 @@ func (a *googleTtsAdapter) FetchVoiceURL(text string) string {
 			SampleRateHertz:  0,
 			EffectsProfileId: nil,
 		},
+		AdvancedVoiceOptions: nil,
 	}
 
 	switch a.LanguageCode {
 	case "ja-JP":
 		req.Voice = &texttospeechpb.VoiceSelectionParams{
-			LanguageCode: a.LanguageCode,
-			SsmlGender:   texttospeechpb.SsmlVoiceGender_FEMALE, //nolint:nosnakecase
-			Name:         "ja-JP-Wavenet-B",
-			CustomVoice:  nil,
+			LanguageCode:            a.LanguageCode,
+			SsmlGender:              texttospeechpb.SsmlVoiceGender_FEMALE,
+			Name:                    "ja-JP-Wavenet-B",
+			CustomVoice:             nil,
+			VoiceClone:              nil,
+			ModelName:               "",
+			MultiSpeakerVoiceConfig: nil,
 		}
 	case "en-US":
 		req.Voice = &texttospeechpb.VoiceSelectionParams{
-			LanguageCode: a.LanguageCode,
-			SsmlGender:   texttospeechpb.SsmlVoiceGender_FEMALE, //nolint:nosnakecase
-			Name:         "en-US-Wavenet-C",
-			CustomVoice:  nil,
+			LanguageCode:            a.LanguageCode,
+			SsmlGender:              texttospeechpb.SsmlVoiceGender_FEMALE,
+			Name:                    "en-US-Wavenet-C",
+			CustomVoice:             nil,
+			VoiceClone:              nil,
+			ModelName:               "",
+			MultiSpeakerVoiceConfig: nil,
 		}
 	}
 

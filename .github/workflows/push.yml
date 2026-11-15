@@ -3,43 +3,34 @@ name: go-ci
 on: [push]
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: set up
-        uses: actions/setup-go@v5
-      - name: check out
-        uses: actions/checkout@v2
-      - name: Cache
-        uses: actions/cache@v2.1.0
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
   build:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
       - name: build
         run: go build ./...
 
   test:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
       - name: test
         run: go test ./... -v
 
   lint:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
-          version: latest
+          go-version-file: go.mod
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0

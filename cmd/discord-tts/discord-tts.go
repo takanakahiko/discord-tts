@@ -153,7 +153,7 @@ func onMessageCreate(discord *discordgo.Session, m *discordgo.MessageCreate) {
 	case isCommandMessage(m.Content, "voice"):
 		coefontID := strings.Replace(m.Content, botName()+" voice ", "", 1)
 		ttsSession.SetCoefontID(coefontID)
-		ttsSession.SendMessagef(discord, "声質を"+coefontID+"に変更しました")
+		ttsSession.SendMessagef(discord, "声質を%sに変更しました", coefontID)
 		return
 	}
 
@@ -198,7 +198,7 @@ func isCommandMessage(message, command string) bool {
 	return strings.HasPrefix(message, botName()+" "+command)
 }
 
-func sendMessagef(discord *discordgo.Session, textChanelID, format string, v ...interface{}) {
+func sendMessagef(discord *discordgo.Session, textChanelID, format string, v ...any) {
 	session := session.NewTtsSession()
 	session.TextChanelID = textChanelID
 	session.SendMessagef(discord, format, v...)
